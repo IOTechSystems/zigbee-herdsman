@@ -379,10 +379,14 @@ class Endpoint extends Entity {
             `${cluster.name}(${JSON.stringify(attributes)}, ${JSON.stringify(options)})`;
         debug.info(log);
 
+        let getNamespace = require('cls-hooked').getNamespace;
+        let session = getNamespace('my session');
+        options.transactionSequenceNumber = session.get('givenTransactionID');
+
         try {
             const frame = Zcl.ZclFrame.create(
                 Zcl.FrameType.GLOBAL, options.direction, options.disableDefaultResponse,
-                options.manufacturerCode, options.transactionSequenceNumber ?? ZclTransactionSequenceNumber.next(),
+                options.manufacturerCode, options.transactionSequenceNumber,
                 options.writeUndiv ? "writeUndiv" : "write", cluster.ID, payload, options.reservedBits
             );
 
@@ -392,6 +396,8 @@ class Endpoint extends Entity {
                     options.disableResponse, options.disableRecovery, options.srcEndpoint,
                 );
             }, options.sendWhen);
+
+            session.set('receivedTransactionID', result.frame.Header.transactionSequenceNumber);
 
             if (!options.disableResponse) {
                 this.checkStatus(result.frame.Payload);
@@ -458,9 +464,13 @@ class Endpoint extends Entity {
             payload.push({attrId: typeof attribute === 'number' ? attribute : cluster.getAttribute(attribute).ID});
         }
 
+        let getNamespace = require('cls-hooked').getNamespace;
+        let session = getNamespace('my session');
+        options.transactionSequenceNumber = session.get('givenTransactionID');
+
         const frame = Zcl.ZclFrame.create(
             Zcl.FrameType.GLOBAL, options.direction, options.disableDefaultResponse,
-            options.manufacturerCode, options.transactionSequenceNumber ?? ZclTransactionSequenceNumber.next(), 'read',
+            options.manufacturerCode, options.transactionSequenceNumber, 'read',
             cluster.ID, payload, options.reservedBits
         );
 
@@ -723,9 +733,13 @@ class Endpoint extends Entity {
         options = this.getOptionsWithDefaults(
             options, true, Zcl.Direction.CLIENT_TO_SERVER, cluster.manufacturerCode);
 
+        let getNamespace = require('cls-hooked').getNamespace;
+        let session = getNamespace('my session');
+        options.transactionSequenceNumber = session.get('givenTransactionID');
+
         const frame = Zcl.ZclFrame.create(
             Zcl.FrameType.GLOBAL, options.direction, options.disableDefaultResponse,
-            options.manufacturerCode, options.transactionSequenceNumber ?? ZclTransactionSequenceNumber.next(),
+            options.manufacturerCode, options.transactionSequenceNumber,
             `writeStructured`, cluster.ID, payload, options.reservedBits
         );
 
@@ -734,12 +748,14 @@ class Endpoint extends Entity {
         debug.info(log);
 
         try {
-            await this.sendRequest(async () => {
-                await Entity.adapter.sendZclFrameToEndpoint(
+            const result = await this.sendRequest(async () => {
+                return await Entity.adapter.sendZclFrameToEndpoint(
                     this.deviceIeeeAddress, this.deviceNetworkAddress, this.ID, frame, options.timeout,
                     options.disableResponse, options.disableRecovery, options.srcEndpoint
                 );
             }, options.sendWhen);
+
+            session.set('receivedTransactionID', result.frame.Header.transactionSequenceNumber);
 
             // TODO: support `writeStructuredResponse`
         } catch (error) {
@@ -758,9 +774,13 @@ class Endpoint extends Entity {
         options = this.getOptionsWithDefaults(
             options, hasResponse, Zcl.Direction.CLIENT_TO_SERVER, cluster.manufacturerCode);
 
+        let getNamespace = require('cls-hooked').getNamespace;
+        let session = getNamespace('my session');
+        options.transactionSequenceNumber = session.get('givenTransactionID');
+
         const frame = Zcl.ZclFrame.create(
             Zcl.FrameType.SPECIFIC, options.direction, options.disableDefaultResponse,
-            options.manufacturerCode, options.transactionSequenceNumber ?? ZclTransactionSequenceNumber.next(),
+            options.manufacturerCode, options.transactionSequenceNumber,
             command.name, cluster.ID, payload, options.reservedBits
         );
 
@@ -775,6 +795,8 @@ class Endpoint extends Entity {
                     options.disableResponse, options.disableRecovery, options.srcEndpoint
                 );
             }, options.sendWhen);
+
+            session.set('receivedTransactionID', result.frame.Header.transactionSequenceNumber);
 
             if (result) {
                 return result.frame.Payload;
