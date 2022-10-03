@@ -479,10 +479,12 @@ class Endpoint extends Entity {
 
             if (!options.disableResponse) {
                 this.checkStatus(result.frame.Payload);
-                if (session != null) {
-                    session.set('returnMessage', result)
+                try {
+                    session.set('returnMessage', result);
                     session.set('returnCluster', cluster);
                     session.set('returnAttributes', attributes);
+                } catch (e){
+                    debug.info(`Could not set session storage, not user call`);
                 }
                 return ZclFrameConverter.attributeKeyValue(result.frame);
             } else {
