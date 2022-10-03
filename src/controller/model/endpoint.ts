@@ -484,7 +484,7 @@ class Endpoint extends Entity {
                     session.set('returnCluster', cluster);
                     session.set('returnAttributes', attributes);
                 } catch (e){
-                    debug.info(`Could not set session storage, assuming not user call`);
+                    debug.info(`Could not set session storage, not user call`);
                 }
                 return ZclFrameConverter.attributeKeyValue(result.frame);
             } else {
