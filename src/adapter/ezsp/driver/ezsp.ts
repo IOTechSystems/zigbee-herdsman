@@ -12,11 +12,12 @@ import {
     EzspDecisionId,
     EzspDecisionBitmask,
     EmberConcentratorType,
-    EzspConfigId
+    EzspConfigId,
+    EmberZdoConfigurationFlags
 } from './types/named';
 import {EventEmitter} from 'events';
 import {EmberApsFrame, EmberNetworkParameters} from './types/struct';
-import {Queue, Waitress} from '../../../utils';
+import {Queue, Waitress, Wait} from '../../../utils';
 import Debug from "debug";
 
 
@@ -239,19 +240,42 @@ export class Ezsp extends EventEmitter {
 
         this.serialDriver = new SerialDriver();
         this.serialDriver.on('received', this.onFrameReceived.bind(this));
+        this.serialDriver.on('close', this.onClose.bind(this));
+        this.serialDriver.on('reset', this.resetHandler.bind(this));
     }
 
     public async connect(path: string, options: Record<string, number|boolean>): Promise<void> {
-        await this.serialDriver.connect(path, options);
-        this.watchdogTimer = setInterval(
-            this.watchdogHandler.bind(this),
-            WATCHDOG_WAKE_PERIOD*1000
-        );
+        for (let i = 1; i < 5; i += 1) {
+            try {
+                await this.serialDriver.connect(path, options);
+                break;
+            } catch (error) {
+                debug.error(`Connection attempt ${i} error: ${error.stack}`);
+                await Wait(5000);
+                debug.log(`Next attempt ${i+1}`);
+            }
+        }
+        if (!this.serialDriver.isInitialized) {
+            throw new Error("Failure to connect");
+        }
+        if (WATCHDOG_WAKE_PERIOD) {
+            this.watchdogTimer = setInterval(
+                this.watchdogHandler.bind(this),
+                WATCHDOG_WAKE_PERIOD*1000
+            );
+        }
     }
 
-    public async close(): Promise<void> {
+    private onClose(): void {
+        debug.log('Close ezsp');
+        this.emit('close');
+    }
+
+    public async close(force: boolean): Promise<void> {
         debug.log('Stop ezsp');
-        clearTimeout(this.watchdogTimer);
+        if (force) {
+            clearTimeout(this.watchdogTimer);
+        }
         await this.serialDriver.close();
     }
 
@@ -269,16 +293,16 @@ export class Ezsp extends EventEmitter {
         debug.log(`<== Frame: ${data.toString('hex')}`);
         let frame_id: number, sequence;
         if ((this.ezspV < 8)) {
-            [sequence, frame_id, data] = [data[0], data[2], data.slice(3)];
+            [sequence, frame_id, data] = [data[0], data[2], data.subarray(3)];
         } else {
             sequence = data[0];
-            [[frame_id], data] = t.deserialize(data.slice(3), [t.uint16_t]);
+            [[frame_id], data] = t.deserialize(data.subarray(3), [t.uint16_t]);
         }
         if ((frame_id === 255)) {
             frame_id = 0;
             if ((data.length > 1)) {
                 frame_id = data[1];
-                data = data.slice(2);
+                data = data.subarray(2);
             }
         }
         const frm = new EZSPFrameData(frame_id, false, data);
@@ -387,7 +411,7 @@ export class Ezsp extends EventEmitter {
         debug.log('Set %s = %s', t.EzspValueId.valueToName(t.EzspValueId, valueId), value);
         const ret = await this.execCommand('setValue', {valueId, value});
         console.assert(ret.status === EmberStatus.SUCCESS,
-            `Command (setValue) returned unexpected state: ${ret}`);
+            `Command (setValue) returned unexpected state: ${ret.status}`);
 
         return ret;
     }
@@ -411,54 +435,66 @@ export class Ezsp extends EventEmitter {
 
     async updateConfig(): Promise<void> {
         const config = [
+            [EzspConfigId.CONFIG_TC_REJOINS_USING_WELL_KNOWN_KEY_TIMEOUT_S, 90],
+            [EzspConfigId.CONFIG_TRUST_CENTER_ADDRESS_CACHE_SIZE, 2],
+            //[EzspConfigId.CONFIG_SUPPORTED_NETWORKS, 1],
             [EzspConfigId.CONFIG_FRAGMENT_DELAY_MS, 50],
-            [EzspConfigId.CONFIG_TX_POWER_MODE, 3],
-            [EzspConfigId.CONFIG_FRAGMENT_WINDOW_SIZE, 1],
-            [EzspConfigId.CONFIG_NEIGHBOR_TABLE_SIZE, 16],
-            [EzspConfigId.CONFIG_ROUTE_TABLE_SIZE, 16],
-            [EzspConfigId.CONFIG_BINDING_TABLE_SIZE, 32],
-            [EzspConfigId.CONFIG_KEY_TABLE_SIZE, 12],
-            [EzspConfigId.CONFIG_ZLL_GROUP_ADDRESSES, 0],
-            [EzspConfigId.CONFIG_ZLL_RSSI_THRESHOLD, 0],
-            [EzspConfigId.CONFIG_APS_UNICAST_MESSAGE_COUNT, 255],
-            [EzspConfigId.CONFIG_BROADCAST_TABLE_SIZE, 43],
-            [EzspConfigId.CONFIG_MAX_HOPS, 30],
-            [EzspConfigId.CONFIG_INDIRECT_TRANSMISSION_TIMEOUT, 30000],
-            [EzspConfigId.CONFIG_SOURCE_ROUTE_TABLE_SIZE, 255],
-            [EzspConfigId.CONFIG_ADDRESS_TABLE_SIZE, 250],
-            [EzspConfigId.CONFIG_TRUST_CENTER_ADDRESS_CACHE_SIZE, 4],
-            [EzspConfigId.CONFIG_SUPPORTED_NETWORKS, 1],
-            [EzspConfigId.CONFIG_SECURITY_LEVEL, 5],
+            [EzspConfigId.CONFIG_PAN_ID_CONFLICT_REPORT_THRESHOLD, 2],
+            //[EzspConfigId.CONFIG_SOURCE_ROUTE_TABLE_SIZE, 16],
+            //[EzspConfigId.CONFIG_ADDRESS_TABLE_SIZE, 16],
+            [EzspConfigId.CONFIG_APPLICATION_ZDO_FLAGS, 
+                EmberZdoConfigurationFlags.APP_HANDLES_UNSUPPORTED_ZDO_REQUESTS | 
+                EmberZdoConfigurationFlags.APP_RECEIVES_SUPPORTED_ZDO_REQUESTS],
+            [EzspConfigId.CONFIG_INDIRECT_TRANSMISSION_TIMEOUT, 7680],
             [EzspConfigId.CONFIG_END_DEVICE_POLL_TIMEOUT, 14],
-            [EzspConfigId.CONFIG_MAX_END_DEVICE_CHILDREN, 32],
+            [EzspConfigId.CONFIG_SECURITY_LEVEL, 5],
             [EzspConfigId.CONFIG_STACK_PROFILE, 2],
+            //[EzspConfigId.CONFIG_TX_POWER_MODE, 3],
+            [EzspConfigId.CONFIG_FRAGMENT_WINDOW_SIZE, 1],
+            //[EzspConfigId.CONFIG_NEIGHBOR_TABLE_SIZE, 16],
+            //[EzspConfigId.CONFIG_ROUTE_TABLE_SIZE, 16],
+            //[EzspConfigId.CONFIG_BINDING_TABLE_SIZE, 32],
+            //[EzspConfigId.CONFIG_KEY_TABLE_SIZE, 12],
+            //[EzspConfigId.CONFIG_ZLL_GROUP_ADDRESSES, 0],
+            //[EzspConfigId.CONFIG_ZLL_RSSI_THRESHOLD, 0],
+            //[EzspConfigId.CONFIG_APS_UNICAST_MESSAGE_COUNT, 255],
+            //[EzspConfigId.CONFIG_BROADCAST_TABLE_SIZE, 43],
+            //[EzspConfigId.CONFIG_MAX_HOPS, 30],
+            //[EzspConfigId.CONFIG_MAX_END_DEVICE_CHILDREN, 32],
             [EzspConfigId.CONFIG_PACKET_BUFFER_COUNT, 255],
         ];
 
         for (const [confName, value] of config) {
-            await this.setConfigurationValue(confName, value);
+            try {
+                await this.setConfigurationValue(confName, value);
+            } catch (error) {
+                debug.error(`setConfigurationValue(${confName}, ${value}) error: ${error} ${error.stack}`);
+            }
         }
     }
 
     async updatePolicies(): Promise<void> {
         // Set up the policies for what the NCP should do.
-        const policies = [
-            [EzspPolicyId.BINDING_MODIFICATION_POLICY,
-                EzspDecisionId.DISALLOW_BINDING_MODIFICATION],
-            [EzspPolicyId.UNICAST_REPLIES_POLICY, EzspDecisionId.HOST_WILL_NOT_SUPPLY_REPLY],
-            [EzspPolicyId.POLL_HANDLER_POLICY, EzspDecisionId.POLL_HANDLER_IGNORE],
-            [EzspPolicyId.MESSAGE_CONTENTS_IN_CALLBACK_POLICY,
-                EzspDecisionId.MESSAGE_TAG_ONLY_IN_CALLBACK],
-            [EzspPolicyId.PACKET_VALIDATE_LIBRARY_POLICY,
-                EzspDecisionId.PACKET_VALIDATE_LIBRARY_CHECKS_DISABLED],
-            [EzspPolicyId.ZLL_POLICY, EzspDecisionId.ALLOW_JOINS],
-            [EzspPolicyId.TC_REJOINS_USING_WELL_KNOWN_KEY_POLICY, EzspDecisionId.ALLOW_JOINS],
-            [EzspPolicyId.APP_KEY_REQUEST_POLICY, EzspDecisionId.ALLOW_APP_KEY_REQUESTS],
-            [EzspPolicyId.TRUST_CENTER_POLICY, EzspDecisionBitmask.ALLOW_UNSECURED_REJOINS
-                | EzspDecisionBitmask.ALLOW_JOINS],
-            [EzspPolicyId.TC_KEY_REQUEST_POLICY, EzspDecisionId.GENERATE_NEW_TC_LINK_KEY],
+        let policies = [
+            // [EzspPolicyId.BINDING_MODIFICATION_POLICY,
+            //     EzspDecisionId.DISALLOW_BINDING_MODIFICATION],
+            // [EzspPolicyId.UNICAST_REPLIES_POLICY, EzspDecisionId.HOST_WILL_NOT_SUPPLY_REPLY],
+            // [EzspPolicyId.POLL_HANDLER_POLICY, EzspDecisionId.POLL_HANDLER_IGNORE],
+            // [EzspPolicyId.MESSAGE_CONTENTS_IN_CALLBACK_POLICY,
+            //     EzspDecisionId.MESSAGE_TAG_ONLY_IN_CALLBACK],
+            // [EzspPolicyId.PACKET_VALIDATE_LIBRARY_POLICY,
+            //     EzspDecisionId.PACKET_VALIDATE_LIBRARY_CHECKS_DISABLED],
+            // [EzspPolicyId.ZLL_POLICY, EzspDecisionId.ALLOW_JOINS],
+            // [EzspPolicyId.TC_REJOINS_USING_WELL_KNOWN_KEY_POLICY, EzspDecisionId.ALLOW_JOINS],
+            [EzspPolicyId.APP_KEY_REQUEST_POLICY, EzspDecisionId.DENY_APP_KEY_REQUESTS],
+            [EzspPolicyId.TC_KEY_REQUEST_POLICY, EzspDecisionId.ALLOW_TC_KEY_REQUESTS],
         ];
-
+        if (this.ezspV >= 8) {
+            policies = policies.concat([
+                [EzspPolicyId.TRUST_CENTER_POLICY, EzspDecisionBitmask.ALLOW_UNSECURED_REJOINS
+                    | EzspDecisionBitmask.ALLOW_JOINS],
+            ]);
+        }
         for (const [policy, value] of policies) {
             await this.setPolicy(policy, value);
         }
@@ -488,6 +524,9 @@ export class Ezsp extends EventEmitter {
 
     public async execCommand(name: string, params: ParamsDesc = null): Promise<EZSPFrameData> {
         debug.log(`==> ${name}: ${JSON.stringify(params)}`);
+        if (!this.serialDriver.isInitialized()) {
+            throw new Error('Connection not initialized');
+        }
         return this.queue.execute<EZSPFrameData>(async (): Promise<EZSPFrameData> => {
             const data = this.makeFrame(name, params, this.cmdSeq);
             const waiter = this.waitFor(name, this.cmdSeq);
@@ -495,6 +534,9 @@ export class Ezsp extends EventEmitter {
             return this.serialDriver.sendDATA(data).then(async ()=>{
                 const response = await waiter.start().promise;
                 return response.payload;
+            }).catch(() => {
+                this.waitress.remove(waiter.ID);
+                throw new Error(`Failure send ${name}:` + JSON.stringify(data));
             });
         });
     }
@@ -555,7 +597,20 @@ export class Ezsp extends EventEmitter {
         if (res.status != EmberStatus.SUCCESS) {
             debug.log("Couldn't set concentrator type %s: %s", true, JSON.stringify(res));
         }
-        // await this.execCommand('setSourceRouteDiscoveryMode', 1);
+        if (this.ezspV >= 8) {
+            await this.execCommand('setSourceRouteDiscoveryMode', {mode: 1});
+        }
+    }
+
+    public sendBroadcast(destination: number, apsFrame: EmberApsFrame, seq: number, data: Buffer)
+        : Promise<EZSPFrameData> {
+        return this.execCommand('sendBroadcast', {
+            destination: destination,
+            apsFrame: apsFrame,
+            radius: EZSP_DEFAULT_RADIUS,
+            messageTag: seq,
+            message: data
+        });
     }
 
     public waitFor(frameId: string|number, sequence: number | null, timeout = 10000)
@@ -584,8 +639,12 @@ export class Ezsp extends EventEmitter {
             this.failures += 1;
             if (this.failures > MAX_WATCHDOG_FAILURES) {
                 this.failures = 0;
-                this.emit('reset');
+                this.resetHandler();
             }
         }
+    }
+
+    private async resetHandler(): Promise<void> {
+        this.emit('reset');
     }
 }

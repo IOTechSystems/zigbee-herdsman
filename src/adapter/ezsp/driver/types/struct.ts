@@ -251,6 +251,8 @@ export class EmberMessageDigest extends EzspStruct {
 }
 
 export class EmberAesMmoHashContext extends EzspStruct {
+    public result: Buffer;
+    public length: number;
     // The hash context for an ongoing hash operation.
     static _fields = [
         // The result of ongoing the hash operation.
@@ -361,6 +363,9 @@ export class EmberCurrentSecurityState extends EzspStruct {
 }
 
 export class EmberKeyStruct extends EzspStruct {
+    public key: EmberKeyData;
+    public outgoingFrameCounter: number;
+    public sequenceNumber: number;
     // A structure containing a key and its associated data.
     static _fields = [
         // A bitmask indicating the presence of data within the various fields

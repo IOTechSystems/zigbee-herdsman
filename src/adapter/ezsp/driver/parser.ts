@@ -16,11 +16,11 @@ export class Parser extends stream.Transform {
     public _transform(chunk: Buffer, _: string, cb: () => void): void {
         if (chunk.indexOf(consts.CANCEL) >= 0) {
             this.buffer = Buffer.from([]);
-            chunk = chunk.slice((chunk.lastIndexOf(consts.CANCEL) + 1));
+            chunk = chunk.subarray(chunk.lastIndexOf(consts.CANCEL) + 1);
         }
         if (chunk.indexOf(consts.SUBSTITUTE) >= 0) {
             this.buffer = Buffer.from([]);
-            chunk = chunk.slice((chunk.indexOf(consts.FLAG) + 1));
+            chunk = chunk.subarray(chunk.indexOf(consts.FLAG) + 1);
         }
         debug(`<-- [${chunk.toString('hex')}]`);
         this.buffer = Buffer.concat([this.buffer, chunk]);
@@ -47,9 +47,8 @@ export class Parser extends stream.Transform {
         /* Extract a frame from the data buffer */
         const place = this.buffer.indexOf(consts.FLAG);
         if (place >= 0) {
-            // todo: check crc data
-            const result = this.unstuff(this.buffer.slice(0, (place + 1)));
-            this.buffer = this.buffer.slice((place + 1));
+            const result = this.unstuff(this.buffer.subarray(0, place + 1));
+            this.buffer = this.buffer.subarray(place + 1);
             return result;
         } else {
             return null;
@@ -67,13 +66,20 @@ export class Parser extends stream.Transform {
                 out.writeUInt8(c ^ consts.STUFF, outIdx++);
                 escaped = false;
             } else {
-                if ((c === consts.ESCAPE)) {
+                if (c === consts.ESCAPE) {
                     escaped = true;
+                } else if (c === consts.XOFF || c === consts.XON) {
+                    // skip
                 } else {
                     out.writeUInt8(c, outIdx++);
                 }
             }
         }
-        return out;
+        return out.subarray(0, outIdx);
+    }
+
+    public reset(): void {
+        // clear buffer
+        this.buffer = Buffer.from([]);
     }
 }

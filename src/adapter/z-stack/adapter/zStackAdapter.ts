@@ -564,7 +564,8 @@ class ZStackAdapter extends Adapter {
                 );
                 const result = await response.start().promise;
                 if (result.payload.status !== ZnpCommandStatus.SUCCESS) {
-                    throw new Error(`LQI for '${networkAddress}' failed`);
+                    throw new Error(`LQI for '${networkAddress}' failed with error: '${
+                        ZnpCommandStatus[result.payload.status]}' (${result.payload.status})`);
                 }
 
                 return result;
@@ -611,7 +612,8 @@ class ZStackAdapter extends Adapter {
                 );
                 const result = await response.start().promise;
                 if (result.payload.status !== ZnpCommandStatus.SUCCESS) {
-                    throw new Error(`Routing table for '${networkAddress}' failed`);
+                    throw new Error(`Routing table for '${networkAddress}' failed with error: '${
+                        ZnpCommandStatus[result.payload.status]}' (${result.payload.status})`);
                 }
 
                 return result;
@@ -645,7 +647,7 @@ class ZStackAdapter extends Adapter {
 
     public async addInstallCode(ieeeAddress: string, key: Buffer): Promise<void> {
         assert(this.version.product !== ZnpVersion.zStack12, 'Install code is not supported for ZStack 1.2 adapter');
-        const payload = {installCodeFormat: 1, ieeeaddr: ieeeAddress, installCode: key};
+        const payload = {installCodeFormat: key.length === 18 ? 1 : 2, ieeeaddr: ieeeAddress, installCode: key};
         await this.znp.request(Subsystem.APP_CNF, 'bdbAddInstallCode', payload);
     }
 
