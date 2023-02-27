@@ -1724,7 +1724,7 @@ describe("zstack-adapter", () => {
         expect(result).toBe("reset");
     });
 
-    it("Add install code", async () => {
+    it("Add install code: Install Code + CRC", async () => {
         basicMocks();
         await adapter.start();
         await adapter.addInstallCode('0x9035EAFFFE424783', Buffer.from([0xAE, 0x3B, 0x28, 0x72, 0x81, 0xCF, 0x16, 0xF5, 0x50, 0x73, 0x3A, 0x0C, 0xEC, 0x38, 0xAA, 0x31, 0xE8, 0x02]))
@@ -1732,6 +1732,18 @@ describe("zstack-adapter", () => {
             installCodeFormat: 1,
             ieeeaddr: '0x9035EAFFFE424783',
             installCode: Buffer.from([0xAE, 0x3B, 0x28, 0x72, 0x81, 0xCF, 0x16, 0xF5, 0x50, 0x73, 0x3A, 0x0C, 0xEC, 0x38, 0xAA, 0x31, 0xE8, 0x02]),
+        }
+        expect(mockZnpRequest).toHaveBeenCalledWith(Subsystem.APP_CNF, 'bdbAddInstallCode', payload);
+    });
+
+    it("Add install code: Key derived from Install Code", async () => {
+        basicMocks();
+        await adapter.start();
+        await adapter.addInstallCode('0x9035EAFFFE424783', Buffer.from([0xAE, 0x3B, 0x28, 0x72, 0x81, 0xCF, 0x16, 0xF5, 0x50, 0x73, 0x3A, 0x0C, 0xEC, 0x38, 0xAA, 0x31]))
+        const payload = {
+            installCodeFormat: 2,
+            ieeeaddr: '0x9035EAFFFE424783',
+            installCode: Buffer.from([0xAE, 0x3B, 0x28, 0x72, 0x81, 0xCF, 0x16, 0xF5, 0x50, 0x73, 0x3A, 0x0C, 0xEC, 0x38, 0xAA, 0x31]),
         }
         expect(mockZnpRequest).toHaveBeenCalledWith(Subsystem.APP_CNF, 'bdbAddInstallCode', payload);
     });
@@ -2510,7 +2522,7 @@ describe("zstack-adapter", () => {
 
         let error;
         try {await adapter.lqi(204)} catch (e) {error = e};
-        expect(error).toStrictEqual(new Error("LQI for '204' failed"));
+        expect(error).toStrictEqual(new Error("LQI for '204' failed with error: 'FAILURE' (1)"));
         expect(mockQueueExecute.mock.calls[0][1]).toBe(204);
         expect(mockZnpRequest).toBeCalledTimes(1);
         expect(mockZnpRequest).toBeCalledWith(Subsystem.ZDO, 'mgmtLqiReq', {dstaddr: 204, startindex: 0}, 1)
@@ -2537,7 +2549,7 @@ describe("zstack-adapter", () => {
 
         let error;
         try {await adapter.routingTable(206)} catch (e) {error = e};
-        expect(error).toStrictEqual(new Error("Routing table for '206' failed"));
+        expect(error).toStrictEqual(new Error("Routing table for '206' failed with error: 'FAILURE' (1)"));
         expect(mockQueueExecute.mock.calls[0][1]).toBe(206);
         expect(mockZnpRequest).toBeCalledTimes(1);
         expect(mockZnpRequest).toBeCalledWith(Subsystem.ZDO, 'mgmtRtgReq', {dstaddr: 206, startindex: 0}, 1)
