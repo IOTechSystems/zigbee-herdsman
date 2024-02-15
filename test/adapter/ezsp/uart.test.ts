@@ -6,11 +6,13 @@ import {Writer} from '../../../src/adapter/ezsp/driver/writer';
 let mockParser;
 const mockSerialPortClose = jest.fn().mockImplementation((cb) => cb ? cb() : null);
 const mockSerialPortFlush = jest.fn().mockImplementation((cb) => cb());
+const mockSerialPortAsyncFlushAndClose = jest.fn();
 const mockSerialPortPipe = jest.fn().mockImplementation((parser) => {
     mockParser = parser;
 });
 const mockSerialPortList = jest.fn().mockReturnValue([]);
 const mockSerialPortOpen = jest.fn().mockImplementation((cb) => cb());
+const mockSerialPortAsyncOpen = jest.fn();
 const mockSerialPortConstructor = jest.fn();
 const mockSerialPortOnce = jest.fn();
 const mockSerialPortSet = jest.fn().mockImplementation((opts, cb) => cb());
@@ -33,6 +35,8 @@ jest.mock('../../../src/adapter/serialPort', () => {
                 write: mockSerialPortWrite,
                 flush: mockSerialPortFlush,
                 isOpen: mockSerialPortIsOpen,
+                asyncOpen: mockSerialPortAsyncOpen,
+                asyncFlushAndClose: mockSerialPortAsyncFlushAndClose,
             };
         })
     };
@@ -42,7 +46,7 @@ let writeBufferSpy;
 
 const mocks = [
     mockSerialPortClose, mockSerialPortPipe, mockSerialPortConstructor, mockSerialPortOpen,
-    mockSerialPortOnce, mockSerialPortWrite, SerialPort,
+    mockSerialPortOnce, mockSerialPortWrite, SerialPort, mockSerialPortAsyncFlushAndClose, mockSerialPortAsyncOpen,
 ];
 
 describe('UART', () => {
@@ -77,16 +81,23 @@ describe('UART', () => {
     });
 
     it('Connect', async () => {
-        await serialDriver.connect("/dev/ttyACM0", {});
+        await serialDriver.connect({path: "/dev/ttyACM0"});
 
         expect(SerialPort).toHaveBeenCalledTimes(1);
-        expect(SerialPort).toHaveBeenCalledWith(
-            {"path": "/dev/ttyACM0", "autoOpen": false, "baudRate": 115200, "rtscts": false},
-        );
+        expect(SerialPort).toHaveBeenCalledWith( {
+            path: "/dev/ttyACM0",
+            baudRate: 115200,
+            rtscts: false,
+            autoOpen: false,
+            parity: 'none',
+            stopBits: 1,
+            xon: true,
+            xoff: true,
+        });
 
         expect(mockSerialPortPipe).toHaveBeenCalledTimes(1);
-        expect(mockSerialPortOpen).toHaveBeenCalledTimes(1);
-        expect(mockSerialPortOnce).toHaveBeenCalledTimes(2);
+        expect(mockSerialPortAsyncOpen).toHaveBeenCalledTimes(1);
+        expect(mockSerialPortOnce).toHaveBeenCalledTimes(1);
         expect(writeBufferSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -101,10 +112,10 @@ describe('UART', () => {
         serialDriver.sendDATA(Buffer.from([1,2,3]));
         serialDriver.sendDATA(Buffer.from([1,2,3]));
         serialDriver.sendDATA(Buffer.from([1,2,3]));
-        expect(writeBufferSpy).toHaveBeenCalledTimes(9);
+        expect(writeBufferSpy).toHaveBeenCalledTimes(2);
         // send another 2 frame - not counted, until resolve 8 promices
         serialDriver.sendDATA(Buffer.from([1,2,3]));
         serialDriver.sendDATA(Buffer.from([1,2,3]));
-        expect(writeBufferSpy).toHaveBeenCalledTimes(9);
+        expect(writeBufferSpy).toHaveBeenCalledTimes(2);
     });
 });

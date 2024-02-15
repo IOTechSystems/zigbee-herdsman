@@ -248,8 +248,10 @@ class Controller extends events.EventEmitter {
 
             // Zigbee 3 networks automatically close after max 255 seconds, keep network open.
             this.permitJoinNetworkClosedTimer = setInterval(async (): Promise<void> => {
-                await this.adapter.permitJoin(254, !device ? null : device.networkAddress);
-                await this.greenPower.permitJoin(254, !device ? null : device.networkAddress);
+                await catcho(async () => {
+                    await this.adapter.permitJoin(254, !device ? null : device.networkAddress);
+                    await this.greenPower.permitJoin(254, !device ? null : device.networkAddress);
+                }, "Failed to keep permit join alive");
             }, 200 * 1000);
 
             if (typeof time === 'number') {
@@ -325,12 +327,24 @@ class Controller extends events.EventEmitter {
         this.databaseSave();
         if (this.options.backupPath && await this.adapter.supportsBackup()) {
             debug.log('Creating coordinator backup');
-            const backup = await this.adapter.backup();
+            const backup = await this.adapter.backup(Device.all().map((d) => d.ieeeAddr));
             const unifiedBackup = await BackupUtils.toUnifiedBackup(backup);
             const tmpBackupPath = this.options.backupPath + '.tmp';
             fs.writeFileSync(tmpBackupPath, JSON.stringify(unifiedBackup, null, 2));
             fs.renameSync(tmpBackupPath, this.options.backupPath);
             debug.log(`Wrote coordinator backup to '${this.options.backupPath}'`);
+        }
+    }
+
+    public async coordinatorCheck(): Promise<{missingRouters: Device[]}> {
+        if (await this.adapter.supportsBackup()) {
+            const backup = await this.adapter.backup(Device.all().map((d) => d.ieeeAddr));
+            const devicesInBackup = backup.devices.map((d) => `0x${d.ieeeAddress.toString('hex')}`);
+            const missingRouters = this.getDevices()
+                .filter((d) => d.type === 'Router' && !devicesInBackup.includes(d.ieeeAddr));
+            return {missingRouters};
+        } else {
+            throw new Error("Coordinator does not coordinator check because it doesn't support backups");
         }
     }
 
@@ -638,7 +652,10 @@ class Controller extends events.EventEmitter {
         }
 
         device.updateLastSeen();
-        device.implicitCheckin();
+        //no implicit checkin for genPollCtrl data because it might interfere with the explicit checkin
+        if (!this.isZclDataPayload(dataPayload, dataType) || !dataPayload.frame.isCluster("genPollCtrl")) {
+            device.implicitCheckin();
+        }
         device.linkquality = dataPayload.linkquality;
 
         let endpoint = device.getEndpoint(dataPayload.endpoint);
@@ -671,18 +688,18 @@ class Controller extends events.EventEmitter {
             if (frame.isGlobal()) {
                 if (frame.isCommand('report')) {
                     type = 'attributeReport';
-                    data = ZclFrameConverter.attributeKeyValue(dataPayload.frame);
+                    data = ZclFrameConverter.attributeKeyValue(dataPayload.frame, device.manufacturerID);
                 } else if (frame.isCommand('read')) {
                     type = 'read';
-                    data = ZclFrameConverter.attributeList(dataPayload.frame);
+                    data = ZclFrameConverter.attributeList(dataPayload.frame, device.manufacturerID);
                 } else if (frame.isCommand('write')) {
                     type = 'write';
-                    data = ZclFrameConverter.attributeKeyValue(dataPayload.frame);
+                    data = ZclFrameConverter.attributeKeyValue(dataPayload.frame, device.manufacturerID);
                 } else {
                     /* istanbul ignore else */
                     if (frame.isCommand('readRsp')) {
                         type = 'readResponse';
-                        data = ZclFrameConverter.attributeKeyValue(dataPayload.frame);
+                        data = ZclFrameConverter.attributeKeyValue(dataPayload.frame, device.manufacturerID);
                     }
                 }
             } else {
@@ -733,7 +750,7 @@ class Controller extends events.EventEmitter {
 
 
         if (this.isZclDataPayload(dataPayload, dataType)) {
-            device.onZclData(dataPayload, endpoint);
+            await device.onZclData(dataPayload, endpoint);
         }
     }
 }

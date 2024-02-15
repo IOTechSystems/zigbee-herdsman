@@ -13,7 +13,6 @@ import * as Zcl from '../../../src/zcl';
 import * as Constants from '../../../src/adapter/z-stack/constants';
 import {ZclDataPayload} from "../../../src/adapter/events";
 import {UnifiedBackupStorage} from "../../../src/models";
-import {ZnpAdapterManager} from "../../../src/adapter/z-stack/adapter/manager";
 
 const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
 const mockSetTimeout = () => setTimeout = jest.fn().mockImplementation((r) => r());
@@ -1292,7 +1291,7 @@ describe("zstack-adapter", () => {
         const result = await adapter.start();
         expect(result).toBe("restored");
 
-        await adapter.backup();
+        await adapter.backup([]);
     });
 
     it("should restore unified backup with 3.0.x adapter and create backup - no tclk seed", async () => {
@@ -1305,7 +1304,7 @@ describe("zstack-adapter", () => {
         const result = await adapter.start();
         expect(result).toBe("restored");
 
-        await adapter.backup();
+        await adapter.backup([]);
     });
 
     it("should restore unified backup with 3.x.0 adapter and create backup - empty", async () => {
@@ -1316,7 +1315,7 @@ describe("zstack-adapter", () => {
         const result = await adapter.start();
         expect(result).toBe("restored");
 
-        await adapter.backup();
+        await adapter.backup([]);
     });
 
     it("should (recommission) restore unified backup with 1.2 adapter and create backup - empty", async () => {
@@ -1327,7 +1326,7 @@ describe("zstack-adapter", () => {
         const result = await adapter.start();
         expect(result).toBe("restored");
 
-        const backup = await adapter.backup();
+        const backup = await adapter.backup([]);
         expect(backup.networkKeyInfo.frameCounter).toBe(0);
     });
 
@@ -1344,7 +1343,7 @@ describe("zstack-adapter", () => {
         builder.nv(NvItemsIds.LEGACY_NWK_SEC_MATERIAL_TABLE_START + 0, secMaterialTableEntry.serialize("aligned"));
         mockZnpRequestWith(builder);
 
-        const backup = await adapter.backup();
+        const backup = await adapter.backup([]);
         expect(backup.networkKeyInfo.frameCounter).toBe(2800);
     });
 
@@ -1356,7 +1355,7 @@ describe("zstack-adapter", () => {
         for (let i = 0; i < 4; i++) { builder.nv(NvItemsIds.LEGACY_NWK_SEC_MATERIAL_TABLE_START + i, Buffer.from("000000000000000000000000", "hex")); }
         mockZnpRequestWith(builder);
 
-        const backup = await adapter.backup();
+        const backup = await adapter.backup([]);
         expect(backup.networkKeyInfo.frameCounter).toBe(1250);
     });
 
@@ -1372,7 +1371,7 @@ describe("zstack-adapter", () => {
         builder.nv(NvItemsIds.LEGACY_NWK_SEC_MATERIAL_TABLE_START + 3, genericEntry.serialize("aligned"));
         mockZnpRequestWith(builder);
 
-        const backup = await adapter.backup();
+        const backup = await adapter.backup([]);
         expect(backup.networkKeyInfo.frameCounter).toBe(8737);
     });
 
@@ -1381,8 +1380,33 @@ describe("zstack-adapter", () => {
         const result = await adapter.start();
         expect(result).toBe("resumed");
 
-        const backup = await adapter.backup();
+        const backup = await adapter.backup([]);
         expect(backup.networkKeyInfo.frameCounter).toBe(0);
+    });
+
+    it("should keep missing devices in backup", async () => {
+        const backupFile = getTempFile();
+        const backupWithMissingDevice = JSON.parse(JSON.stringify(backupMatchingConfig));
+        backupWithMissingDevice.devices.push({
+            "nwk_address": "20fa",
+            "ieee_address": "00128d11124fa80b",
+            "link_key": {
+              "key": "bff550908aa1529ee90eea3c3bdc26fc",
+              "rx_counter": 0,
+              "tx_counter": 2
+            }
+        });
+        fs.writeFileSync(backupFile, JSON.stringify(backupMatchingConfig), "utf8");
+        adapter = new ZStackAdapter(networkOptions, serialPortOptions, backupFile, {concurrent: 3});
+        mockZnpRequestWith(empty3AlignedRequestMock);
+        await adapter.start();
+        fs.writeFileSync(backupFile, JSON.stringify(backupWithMissingDevice), "utf8");
+        const devicesInDatabase = backupWithMissingDevice.devices.map((d) => `0x${d.ieee_address}`);
+        const backup = await adapter.backup(devicesInDatabase);
+        const missingDevice = backup.devices.find((d) => d.ieeeAddress.toString('hex') == '00128d11124fa80b');
+        expect(missingDevice).not.toBeNull();
+        expect(backupWithMissingDevice.devices.length).toBe(backup.devices.length);
+        expect(missingDevice?.linkKey?.key.toString('hex')).toBe('bff550908aa1529ee90eea3c3bdc26fc');
     });
 
     it("should fail when backup file is corrupted - Coordinator backup is corrupted", async () => {
@@ -1485,7 +1509,7 @@ describe("zstack-adapter", () => {
         );
         const result = await adapter.start();
         expect(result).toBe("resumed");
-        await expect(adapter.backup()).rejects.toThrowError("Failed to read adapter IEEE address");
+        await expect(adapter.backup([])).rejects.toThrowError("Failed to read adapter IEEE address");
     });
 
     it("should fail to create backup with 3.0.x adapter - adapter not commissioned - missing nib", async () => {
@@ -1495,7 +1519,7 @@ describe("zstack-adapter", () => {
         expect(result).toBe("reset");
         builder.nv(NvItemsIds.NIB, null);
         mockZnpRequestWith(builder);
-        await expect(adapter.backup()).rejects.toThrowError("Cannot backup - adapter not commissioned");
+        await expect(adapter.backup([])).rejects.toThrowError("Cannot backup - adapter not commissioned");
     });
 
     it("should fail to create backup with 3.0.x adapter - missing active key info", async () => {
@@ -1505,7 +1529,7 @@ describe("zstack-adapter", () => {
         expect(result).toBe("reset");
         builder.nv(NvItemsIds.NWK_ACTIVE_KEY_INFO, null);
         mockZnpRequestWith(builder);
-        await expect(adapter.backup()).rejects.toThrowError("Cannot backup - missing active key info");
+        await expect(adapter.backup([])).rejects.toThrowError("Cannot backup - missing active key info");
     });
 
     it("should restore legacy backup with 3.0.x adapter - empty", async () => {
@@ -2454,6 +2478,34 @@ describe("zstack-adapter", () => {
         await adapter.start();
 
         mockZnpRequest.mockClear();
+        assocGetWithAddressNodeRelation = 2;
+        const responseMismatchFrame = Zcl.ZclFrame.create(Zcl.FrameType.GLOBAL, Zcl.Direction.SERVER_TO_CLIENT, true, null, 102, 'readRsp', 0, [{attrId: 0, attrData: 5, dataType: 32, status: 0}]);
+        const frame = Zcl.ZclFrame.create(Zcl.FrameType.GLOBAL, Zcl.Direction.CLIENT_TO_SERVER, false, null, 100, 'read', 0, [{attrId: 0}]);
+        const objectMismatch = {type: Type.AREQ, subsystem: Subsystem.AF, command: 'incomingMsg', payload: {clusterid: 0, srcendpoint: 20, srcaddr: 2, linkquality: 101, groupid: 12, data: responseMismatchFrame.toBuffer()}};
+        let error;
+        try {
+            mockSetTimeout();
+            const response = adapter.sendZclFrameToEndpoint('0x02', 2, 20, frame, 1, false, false);
+            znpReceived(objectMismatch);
+            await response;
+        } catch (e) {
+            error = e;
+        }
+
+        expect(mockQueueExecute.mock.calls[0][1]).toBe(2);
+        expect(mockZnpRequest).toBeCalledTimes(4);
+        expect(mockZnpRequest).toHaveBeenNthCalledWith(1, 4, "dataRequest", {"clusterid": 0, "data": frame.toBuffer(), "destendpoint": 20, "dstaddr": 2, "len": 5, "options": 0, "radius": 30, "srcendpoint": 1, "transid": 1}, 99)
+        expect(mockZnpRequest).toHaveBeenNthCalledWith(2, 7, "assocGetWithAddress", {extaddr: '0x02', nwkaddr: 2})
+        expect(mockZnpRequest).toHaveBeenNthCalledWith(3, 5, 'extRouteDisc', {dstAddr: 2, options: 0, radius: Constants.AF.DEFAULT_RADIUS})
+        expect(mockZnpRequest).toHaveBeenNthCalledWith(4, 4, "dataRequest", {"clusterid": 0, "data": frame.toBuffer(), "destendpoint": 20, "dstaddr": 2, "len": 5, "options": 0, "radius": 30, "srcendpoint": 1, "transid": 2}, 99)
+        expect(error).toStrictEqual(new Error("Timeout - 2 - 20 - 100 - 0 - 1 after 1ms"));
+    });
+
+    it('Send zcl frame network address timeout should discover route, rewrite child entry and retry for sleepy end device', async () => {
+        basicMocks();
+        await adapter.start();
+
+        mockZnpRequest.mockClear();
 
         const responseMismatchFrame = Zcl.ZclFrame.create(Zcl.FrameType.GLOBAL, Zcl.Direction.SERVER_TO_CLIENT, true, null, 102, 'readRsp', 0, [{attrId: 0, attrData: 5, dataType: 32, status: 0}]);
         const frame = Zcl.ZclFrame.create(Zcl.FrameType.GLOBAL, Zcl.Direction.CLIENT_TO_SERVER, false, null, 100, 'read', 0, [{attrId: 0}]);
@@ -2469,10 +2521,13 @@ describe("zstack-adapter", () => {
         }
 
         expect(mockQueueExecute.mock.calls[0][1]).toBe(2);
-        expect(mockZnpRequest).toBeCalledTimes(3);
+        expect(mockZnpRequest).toBeCalledTimes(6);
         expect(mockZnpRequest).toHaveBeenNthCalledWith(1, 4, "dataRequest", {"clusterid": 0, "data": frame.toBuffer(), "destendpoint": 20, "dstaddr": 2, "len": 5, "options": 0, "radius": 30, "srcendpoint": 1, "transid": 1}, 99)
-        expect(mockZnpRequest).toHaveBeenNthCalledWith(2, 5, 'extRouteDisc', {dstAddr: 2, options: 0, radius: Constants.AF.DEFAULT_RADIUS})
-        expect(mockZnpRequest).toHaveBeenNthCalledWith(3, 4, "dataRequest", {"clusterid": 0, "data": frame.toBuffer(), "destendpoint": 20, "dstaddr": 2, "len": 5, "options": 0, "radius": 30, "srcendpoint": 1, "transid": 2}, 99)
+        expect(mockZnpRequest).toHaveBeenNthCalledWith(2, 7, "assocGetWithAddress", {extaddr: '0x02', nwkaddr: 2})
+        expect(mockZnpRequest).toHaveBeenNthCalledWith(3, 7, "assocRemove", {ieeeadr: '0x02'})
+        expect(mockZnpRequest).toHaveBeenNthCalledWith(4, 7, "assocAdd",         {ieeeadr: '0x02', nwkaddr: 2, noderelation: 1})
+        expect(mockZnpRequest).toHaveBeenNthCalledWith(5, 5, 'extRouteDisc', {dstAddr: 2, options: 0, radius: Constants.AF.DEFAULT_RADIUS})
+        expect(mockZnpRequest).toHaveBeenNthCalledWith(6, 4, "dataRequest", {"clusterid": 0, "data": frame.toBuffer(), "destendpoint": 20, "dstaddr": 2, "len": 5, "options": 0, "radius": 30, "srcendpoint": 1, "transid": 2}, 99)
         expect(error).toStrictEqual(new Error("Timeout - 2 - 20 - 100 - 0 - 1 after 1ms"));
     });
 
@@ -2718,6 +2773,16 @@ describe("zstack-adapter", () => {
         adapter.on("deviceLeave", (p) => {deviceAnnounce = p;})
         znpReceived(object);
         expect(deviceAnnounce).toStrictEqual({ieeeAddr: '0x123', networkAddress: 123});
+    });
+
+    it('Ignore device leave with rejoin', async () => {
+        basicMocks();
+        await adapter.start();
+        let deviceAnnounce;
+        const object = {type: Type.AREQ, subsystem: Subsystem.ZDO, command: 'leaveInd', payload: {srcaddr: 123, extaddr: '0x123', rejoin: true},};
+        adapter.on("deviceLeave", (p) => {deviceAnnounce = p;})
+        znpReceived(object);
+        expect(deviceAnnounce).toStrictEqual(undefined);
     });
 
     it('Do nothing wiht non areq event', async () => {
