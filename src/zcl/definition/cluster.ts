@@ -50,6 +50,10 @@ const Cluster: {
             deviceEnabled: {ID: 18, type: DataType.boolean},
             alarmMask: {ID: 19, type: DataType.bitmap8},
             disableLocalConfig: {ID: 20, type: DataType.bitmap8},
+            develcoPrimarySwVersion: {ID: 0x8000, type: DataType.octetStr, manufacturerCode: ManufacturerCode.DEVELCO},
+            develcoPrimaryHwVersion: {ID: 0x8020, type: DataType.octetStr, manufacturerCode: ManufacturerCode.DEVELCO},
+            develcoLedControl: {ID: 0x8100, type: DataType.bitmap8, manufacturerCode: ManufacturerCode.DEVELCO},
+            schneiderMeterRadioPower: {ID: 0xE200, type: DataType.int8, manufacturerCode: ManufacturerCode.SCHNEIDER},
         },
         commands: {
             resetFactDefault: {
@@ -462,6 +466,7 @@ const Cluster: {
             elkoPreWarningTime: {ID: 0xE000, type: DataType.uint16, manufacturerCode: ManufacturerCode.ELKO},
             elkoOnTimeReload: {ID: 0xE001, type: DataType.uint32, manufacturerCode: ManufacturerCode.ELKO},
             elkoOnTimeReloadOptions: {ID: 0xE002, type: DataType.bitmap8, manufacturerCode: ManufacturerCode.ELKO},
+            nodonTransitionTime: {ID: 0x0001, type: DataType.uint16, manufacturerCode: ManufacturerCode.NODON},
         },
         commands: {
             off: {
@@ -530,7 +535,20 @@ const Cluster: {
             defaultMoveRate: {ID: 20, type: DataType.uint16},
             startUpCurrentLevel: {ID: 16384, type: DataType.uint8},
             elkoStartUpCurrentLevel: {ID: 0x4000, type: DataType.uint8, manufacturerCode: ManufacturerCode.ELKO},
-            ubisysMinimumOnLevel: {ID: 0, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysMinimumOnLevel: {ID: 0x0000, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysValveType: {ID: 0x0001, type: DataType.bitmap8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysCyclePeriod: {ID: 0x0002, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysSeason: {ID: 0x0003, type: DataType.enum8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysBackupLevel: {ID: 0x0004, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysAlternateBackupLevel: {ID: 0x0005, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysLowerRange: {ID: 0x0006, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysUpperRange: {ID: 0x0007, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysPumpThresholdOn: {ID: 0x0008, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysPumpThresholdOff: {ID: 0x0009, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysHeatingDemandEnableThreshold: {ID: 0x000A, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysHeatingDemandDisableThreshold: {ID: 0x000B, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysCoolingDemandEnableThreshold: {ID: 0x000C, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysCoolingDemandDisableThreshold: {ID: 0x000D, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
         },
         commands: {
             moveToLevel: {
@@ -1218,7 +1236,7 @@ const Cluster: {
                     {name: 'gppGddLink', type: DataType.uint8,conditions: [{type: 'bitMaskSet', param:'options', mask: 0x4000}]},
                 ],
             },
-            commisioningNotification: {
+            commissioningNotification: {
                 ID: 4,
                 parameters: [
                     {name: 'options', type: DataType.uint16},
@@ -1820,8 +1838,12 @@ const Cluster: {
             ubisysStartupSteps: {ID: 0x1007, type: DataType.uint16, manufacturerCode: ManufacturerCode.Ubisys},
             tuyaMovingState: {ID: 0xf000, type: DataType.enum8},
             tuyaCalibration: {ID: 0xf001, type: DataType.enum8},
+            stepPositionLift: {ID: 0xf001, type: DataType.enum8, manufacturerCode: ManufacturerCode.LegrandNetatmo},
             tuyaMotorReversal: {ID: 0xf002, type: DataType.enum8},
+            calibrationMode: {ID: 0xf002, type: DataType.enum8, manufacturerCode: ManufacturerCode.LegrandNetatmo},
             moesCalibrationTime: {ID: 0xf003, type: DataType.uint16},
+            targetPositionTiltPercentage: {ID: 0xf003, type: DataType.enum8, manufacturerCode: ManufacturerCode.LegrandNetatmo},
+            stepPositionTilt: {ID: 0xf004, type: DataType.enum8, manufacturerCode: ManufacturerCode.LegrandNetatmo},
             elkoDriveCloseDuration: {ID: 0xE000, type: DataType.uint16, manufacturerCode: ManufacturerCode.ELKO},
             elkoProtectionStatus: {ID: 0xE010, type: DataType.bitmap8, manufacturerCode: ManufacturerCode.ELKO},
             elkoProtectionSensor: {ID: 0xE013, type: DataType.bitmap8, manufacturerCode: ManufacturerCode.ELKO},
@@ -1951,7 +1973,7 @@ const Cluster: {
         attributes: {
             localTemp: {ID: 0, type: DataType.int16},
             outdoorTemp: {ID: 1, type: DataType.int16},
-            ocupancy: {ID: 2, type: DataType.bitmap8},
+            occupancy: {ID: 2, type: DataType.bitmap8},
             absMinHeatSetpointLimit: {ID: 3, type: DataType.int16},
             absMaxHeatSetpointLimit: {ID: 4, type: DataType.int16},
             absMinCoolSetpointLimit: {ID: 5, type: DataType.int16},
@@ -1993,9 +2015,11 @@ const Cluster: {
             acCollTemp: {ID: 70, type: DataType.int16},
             acCapacityFormat: {ID: 71, type: DataType.enum8},
             SinopeOccupancy: {ID: 1024, type: DataType.enum8, manufacturerCode: ManufacturerCode.Sinope},
+            SinopeMainCycleOutput: {ID: 1025, type: DataType.uint16, manufacturerCode: ManufacturerCode.Sinope},
             SinopeBacklight: {ID: 1026, type: DataType.enum8, manufacturerCode: ManufacturerCode.Sinope},
+            SinopeAuxCycleOutput: {ID: 1028, type: DataType.uint16, manufacturerCode: ManufacturerCode.Sinope},
             StelproSystemMode: {ID: 0x401c, type: DataType.enum8},
-            StelproOutdoorTemp: {ID: 0x4001, type: DataType.int16, manufacturerCode: ManufacturerCode.Stelpro},
+            StelproOutdoorTemp: {ID: 0x4001, type: DataType.int16},
             viessmannWindowOpenInternal: {ID: 0x4000, type: DataType.enum8, manufacturerCode: ManufacturerCode.VIESSMAN_ELEKTRO},
             viessmannWindowOpenForce: {ID: 0x4003, type: DataType.boolean, manufacturerCode: ManufacturerCode.VIESSMAN_ELEKTRO},
             viessmannAssemblyMode: {ID: 0x4012, type: DataType.boolean, manufacturerCode: ManufacturerCode.VIESSMAN_ELEKTRO},
@@ -2027,24 +2051,42 @@ const Cluster: {
             danfossRoomFloorSensorMode: {ID: 0x4120, type: DataType.enum8, manufacturerCode: ManufacturerCode.DANFOSS},
             danfossFloorMinSetpoint: {ID: 0x4121, type: DataType.int16, manufacturerCode: ManufacturerCode.DANFOSS},
             danfossFloorMaxSetpoint: {ID: 0x4122, type: DataType.int16, manufacturerCode: ManufacturerCode.DANFOSS},
-            elkoLoad: {ID: 0x0401, type: DataType.uint16, manufacturerCode: ManufacturerCode.ELKO},
-            elkoDisplayText: {ID: 0x0402, type: DataType.charStr, manufacturerCode: ManufacturerCode.ELKO},
-            elkoSensor: {ID: 0x0403, type: DataType.enum8, manufacturerCode: ManufacturerCode.ELKO},
-            elkoRegulatorTime: {ID: 0x0404, type: DataType.uint8, manufacturerCode: ManufacturerCode.ELKO},
-            elkoRegulatorMode: {ID: 0x0405, type: DataType.boolean, manufacturerCode: ManufacturerCode.ELKO},
-            elkoPowerStatus: {ID: 0x0406, type: DataType.boolean, manufacturerCode: ManufacturerCode.ELKO},
-            elkoDateTime: {ID: 0x0407, type: DataType.octetStr, manufacturerCode: ManufacturerCode.ELKO},
-            elkoMeanPower: {ID: 0x0408, type: DataType.uint16, manufacturerCode: ManufacturerCode.ELKO},
-            elkoExternalTemp: {ID: 0x0409, type: DataType.int16, manufacturerCode: ManufacturerCode.ELKO},
-            elkoNightSwitching: {ID: 0x0411, type: DataType.boolean, manufacturerCode: ManufacturerCode.ELKO},
-            elkoFrostGuard: {ID: 0x0412, type: DataType.boolean, manufacturerCode: ManufacturerCode.ELKO},
-            elkoChildLock: {ID: 0x0413, type: DataType.boolean, manufacturerCode: ManufacturerCode.ELKO},
-            elkoMaxFloorTemp: {ID: 0x0414, type: DataType.uint8, manufacturerCode: ManufacturerCode.ELKO},
-            elkoRelayState: {ID: 0x0415, type: DataType.boolean, manufacturerCode: ManufacturerCode.ELKO},
-            elkoVersion: {ID: 0x0416, type: DataType.octetStr, manufacturerCode: ManufacturerCode.ELKO},
-            elkoCalibration: {ID: 0x0417, type: DataType.int8, manufacturerCode: ManufacturerCode.ELKO},
-            elkoLastMessageId: {ID: 0x0418, type: DataType.uint8, manufacturerCode: ManufacturerCode.ELKO},
-            elkoLastMessageStatus: {ID: 0x0419, type: DataType.uint8, manufacturerCode: ManufacturerCode.ELKO},
+            elkoLoad: {ID: 0x0401, type: DataType.uint16},
+            elkoDisplayText: {ID: 0x0402, type: DataType.charStr},
+            elkoSensor: {ID: 0x0403, type: DataType.enum8},
+            elkoRegulatorTime: {ID: 0x0404, type: DataType.uint8},
+            elkoRegulatorMode: {ID: 0x0405, type: DataType.boolean},
+            elkoPowerStatus: {ID: 0x0406, type: DataType.boolean},
+            elkoDateTime: {ID: 0x0407, type: DataType.octetStr},
+            elkoMeanPower: {ID: 0x0408, type: DataType.uint16},
+            elkoExternalTemp: {ID: 0x0409, type: DataType.int16},
+            elkoNightSwitching: {ID: 0x0411, type: DataType.boolean},
+            elkoFrostGuard: {ID: 0x0412, type: DataType.boolean},
+            elkoChildLock: {ID: 0x0413, type: DataType.boolean},
+            elkoMaxFloorTemp: {ID: 0x0414, type: DataType.uint8},
+            elkoRelayState: {ID: 0x0415, type: DataType.boolean},
+            elkoVersion: {ID: 0x0416, type: DataType.octetStr},
+            elkoCalibration: {ID: 0x0417, type: DataType.int8},
+            elkoLastMessageId: {ID: 0x0418, type: DataType.uint8},
+            elkoLastMessageStatus: {ID: 0x0419, type: DataType.uint8},
+            fourNoksHysteresisHigh: {ID: 0x0101, type: DataType.uint16, manufacturerCode: ManufacturerCode._4_NOKS},
+            fourNoksHysteresisLow: {ID: 0x0102, type: DataType.uint16, manufacturerCode: ManufacturerCode._4_NOKS},
+            ubisysClassBTemperatureOffset: {ID: 0x0000, type: DataType.int8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysReturnFlowTemperatureWeight: {ID: 0x0001, type: DataType.int8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysRawOutdoorTemperature: {ID: 0x0002, type: DataType.struct, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysRawLocalTemperatureA: {ID: 0x0003, type: DataType.struct, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysRawLocalTemperatureB: {ID: 0x0004, type: DataType.struct, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysRawForwardFlowTemperature: {ID: 0x0005, type: DataType.struct, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysRawReturnFlowTemperature: {ID: 0x0006, type: DataType.struct, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysInstalledExtensions: {ID: 0x0007, type: DataType.bitmap64, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysTemperatureOffset: {ID: 0x0010, type: DataType.int8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysDefaultOccupiedHeatingSetpoint: {ID: 0x0011, type: DataType.int16, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysVacationMode: {ID: 0x0012, type: DataType.boolean, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysRemoteTemperature: {ID: 0x0013, type: DataType.int16, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysRemoteTemperatureValidDuration: {ID: 0x0014, type: DataType.uint8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysProportionalGain: {ID: 0x0020, type: DataType.int16, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysProportionalShift: {ID: 0x0021, type: DataType.int8, manufacturerCode: ManufacturerCode.Ubisys},
+            ubisysIntegralFactor: {ID: 0x0022, type: DataType.int16, manufacturerCode: ManufacturerCode.Ubisys},
         },
         commands: {
             setpointRaiseLower: {
@@ -2105,6 +2147,14 @@ const Cluster: {
                     {name: 'reserved', type: DataType.uint8},
                 ],
             },
+            wiserSmartSetFipMode: {
+                ID: 225,
+                parameters: [
+                    {name: 'zonemode', type: DataType.uint8},
+                    {name: 'fipmode', type: DataType.enum8},
+                    {name: 'reserved', type: DataType.uint8},
+                ],
+            },
             wiserSmartCalibrateValve: {
                 ID: 226,
                 parameters: [
@@ -2114,7 +2164,12 @@ const Cluster: {
                 ID: 0xa0,
                 parameters: [
                 ],
-            }
+            },
+            boschCalibrateValve: {
+                ID: 0x41,
+                parameters: [
+                ],
+            },
         },
         commandsResponse: {
             getWeeklyScheduleRsp: {
@@ -2402,6 +2457,14 @@ const Cluster: {
                     {name: 'maximum', type: DataType.uint16},
                 ],
             },
+            tuyaMoveToHueAndSaturationBrightness2: {
+                ID: 225,
+                parameters: [
+                    {name: 'hue', type: DataType.uint16},
+                    {name: 'saturation', type: DataType.uint16},
+                    {name: 'brightness', type: DataType.uint16},
+                ],
+            },
             tuyaRgbMode: {
                 ID: 240,
                 parameters: [
@@ -2419,6 +2482,14 @@ const Cluster: {
                 ID: 250,
                 parameters: [
                     {name: 'enable', type: DataType.uint8},
+                ],
+            },
+            tuyaOnOffTransitionTime: {
+                ID: 251,
+                parameters: [
+                    {name: 'unknown', type: DataType.uint8},
+                    {name: 'onTransitionTime', type: BuffaloZclDataType.BIG_ENDIAN_UINT24},
+                    {name: 'offTransitionTime', type: BuffaloZclDataType.BIG_ENDIAN_UINT24},
                 ],
             },
         },
@@ -2598,6 +2669,17 @@ const Cluster: {
         commands: {},
         commandsResponse: {},
     },
+    pm25Measurement: {
+        ID: 0x042a,
+        attributes: {
+            measuredValue: {ID: 0x0000, type: DataType.uint16},
+            measuredMinValue: {ID: 0x0001, type: DataType.uint16},
+            measuredMaxValue: {ID: 0x0002, type: DataType.uint16},
+            measuredTolerance: {ID: 0x0003, type: DataType.uint16},
+        },
+        commands: {},
+        commandsResponse: {},
+    },
     ssIasZone: {
         ID: 1280,
         attributes: {
@@ -2608,6 +2690,7 @@ const Cluster: {
             zoneId: {ID: 17, type: DataType.uint8},
             numZoneSensitivityLevelsSupported: {ID: 18, type: DataType.uint8},
             currentZoneSensitivityLevel: {ID: 19, type: DataType.uint8},
+            develcoAlarmOffDelay: {ID: 0x8001, type: DataType.uint16, manufacturerCode: ManufacturerCode.DEVELCO},
         },
         commands: {
             enrollRsp: {
@@ -2626,6 +2709,16 @@ const Cluster: {
                 ID: 2,
                 parameters: [
                 ],
+            },
+            boschTestTamper: {
+                ID: 0xF3,
+                parameters: [
+                    {name: 'data', type: DataType.uint8},
+                ],
+            },
+            boschSmokeDetectorSiren: {
+                ID: 0x80,
+                parameters: [{name: "data", type: DataType.uint16}],
             },
         },
         commandsResponse: {
@@ -2823,6 +2916,12 @@ const Cluster: {
                 ID: 1,
                 parameters: [
                     {name: 'squawkinfo', type: DataType.uint8},
+                ],
+            },
+            boschOutdoorSiren: {
+                ID: 240,
+                parameters: [
+                    {name: 'data', type: DataType.uint8},
                 ],
             },
         },
@@ -3402,6 +3501,7 @@ const Cluster: {
             owonL1PhaseReactivePower: {ID: 0x2100, type: DataType.int24,manufacturerCode: ManufacturerCode.OWON},
             owonL2PhaseReactivePower: {ID: 0x2101, type: DataType.int24,manufacturerCode: ManufacturerCode.OWON},
             owonL3PhaseReactivePower: {ID: 0x2102, type: DataType.int24,manufacturerCode: ManufacturerCode.OWON},
+            owonReactivePowerSum: {ID: 0x2103, type: DataType.int24,manufacturerCode: ManufacturerCode.OWON},
             owonL1PhaseVoltage: {ID: 0x3000, type: DataType.uint24,manufacturerCode: ManufacturerCode.OWON},
             owonL2PhaseVoltage: {ID: 0x3001, type: DataType.uint24,manufacturerCode: ManufacturerCode.OWON},
             owonL3PhaseVoltage: {ID: 0x3002, type: DataType.uint24,manufacturerCode: ManufacturerCode.OWON},
@@ -3417,9 +3517,11 @@ const Cluster: {
             owonL2ReactiveEnergy: {ID: 0x4101, type: DataType.uint48,manufacturerCode: ManufacturerCode.OWON},
             owonL3ReactiveEnergy: {ID: 0x4102, type: DataType.uint48,manufacturerCode: ManufacturerCode.OWON},
             owonReactiveEnergySum: {ID: 0x4103, type: DataType.uint48,manufacturerCode: ManufacturerCode.OWON},
+            owonL1PowerFactor: {ID: 0x4104, type: DataType.int8,manufacturerCode: ManufacturerCode.OWON},
+            owonL2PowerFactor: {ID: 0x4105, type: DataType.int8,manufacturerCode: ManufacturerCode.OWON},
+            owonL3PowerFactor: {ID: 0x4106, type: DataType.int8,manufacturerCode: ManufacturerCode.OWON},
             owonFrequency: {ID: 0x5005, type: DataType.uint8,manufacturerCode: ManufacturerCode.OWON},
             owonReportMap: {ID: 0x1000, type: DataType.bitmap8,manufacturerCode: ManufacturerCode.OWON},
-            owonReactivePowerSum: {ID: 0x2103, type: DataType.int24,manufacturerCode: ManufacturerCode.OWON},
             owonLastHistoricalRecordTime: {ID: 0x5000, type: DataType.uint32,manufacturerCode: ManufacturerCode.OWON},
             owonOldestHistoricalRecordTime: {ID: 0x5001, type: DataType.uint32,manufacturerCode: ManufacturerCode.OWON},
             owonMinimumReportCycle: {ID: 0x5002, type: DataType.uint32,manufacturerCode: ManufacturerCode.OWON},
@@ -3428,6 +3530,38 @@ const Cluster: {
             owonAccumulativeEnergyThreshold: {ID: 0x5006, type: DataType.uint8,manufacturerCode: ManufacturerCode.OWON},
             owonReportMode: {ID: 0x5007, type: DataType.uint8,manufacturerCode: ManufacturerCode.OWON},
             owonPercentChangeInPower: {ID: 0x5007, type: DataType.uint8,manufacturerCode: ManufacturerCode.OWON},
+            schneiderActiveEnergyTotal: {ID: 0x4010, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactiveEnergyTotal: {ID: 0x4011, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentEnergyTotal: {ID: 0x4012, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialActiveEnergyTotal: {ID: 0x4014, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialReactiveEnergyTotal: {ID: 0x4015, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialApparentEnergyTotal: {ID: 0x4016, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialActiveEnergyL1Phase: {ID: 0x4100, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialReactiveEnergyL1Phase: {ID: 0x4101, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialApparentEnergyL1Phase: {ID: 0x4102, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderActiveEnergyL1Phase: {ID: 0x4103, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactiveEnergyL1Phase: {ID: 0x4104, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentEnergyL1Phase: {ID: 0x4105, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialActiveEnergyL2Phase: {ID: 0x4200, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialReactiveEnergyL2Phase: {ID: 0x4201, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialApparentEnergyL2Phase: {ID: 0x4202, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderActiveEnergyL2Phase: {ID: 0x4203, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactiveEnergyL2Phase: {ID: 0x4204, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentEnergyL2Phase: {ID: 0x4205, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialActiveEnergyL3Phase: {ID: 0x4300, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialReactiveEnergyL3Phase: {ID: 0x4301, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderPartialApparentEnergyL3Phase: {ID: 0x4302, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderActiveEnergyL3Phase: {ID: 0x4303, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactiveEnergyL3Phase: {ID: 0x4304, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentEnergyL3Phase: {ID: 0x4305, type: DataType.int48, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderActiveEnergyMultiplier: {ID: 0x4400, type: DataType.uint24, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderActiveEnergyDivisor: {ID: 0x4401, type: DataType.uint24, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactiveEnergyMultiplier: {ID: 0x4402, type: DataType.uint24, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactiveEnergyDivisor: {ID: 0x4403, type: DataType.uint24, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentEnergyMultiplier: {ID: 0x4404, type: DataType.uint24, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentEnergyDivisor: {ID: 0x4405, type: DataType.uint24, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderEnergyResetDateTime: {ID: 0x4501, type: DataType.utc, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderEnergyCountersReportingPeriod: {ID: 0x4600, type: DataType.uint16, manufacturerCode: ManufacturerCode.SCHNEIDER},
         },
         commands: {
             getProfile: {
@@ -3505,6 +3639,29 @@ const Cluster: {
             owonGetHistoryRecordRsp: {
                 ID: 0x20,
                 parameters: [
+                ],
+            },
+        },
+    },
+    tunneling: {
+        ID: 0x0704,
+        attributes: {
+        },
+        commands: {
+            transferData: {
+                ID: 2,
+                parameters: [
+                    {name: 'tunnelID', type: DataType.uint16},
+                    {name: 'data', type: BuffaloZclDataType.BUFFER},
+                ],
+            },
+        },
+        commandsResponse: {
+            transferDataResp: {
+                ID: 1,
+                parameters: [
+                    {name: 'tunnelID', type: DataType.uint16},
+                    {name: 'data', type: BuffaloZclDataType.BUFFER},
                 ],
             },
         },
@@ -3821,6 +3978,27 @@ const Cluster: {
             rmsExtremeUnderVoltagePeriodPhC: {ID: 2581, type: DataType.uint16},
             rmsVoltageSagPeriodPhC: {ID: 2582, type: DataType.uint16},
             rmsVoltageSwellPeriodPhC: {ID: 2583, type: DataType.uint16},
+            schneiderActivePowerDemandTotal: {ID: 0x4300, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactivePowerDemandTotal: {ID: 0x4303, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentPowerDemandTotal: {ID: 0x4318, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderDemandIntervalDuration: {ID: 0x4319, type: DataType.uint24, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderDemandDateTime: {ID: 0x4320, type: DataType.utc, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderActivePowerDemandPhase1: {ID: 0x4509, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactivePowerDemandPhase1: {ID: 0x450A, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentPowerDemandPhase1: {ID: 0x450B, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderDemandIntervalMinimalVoltageL1: {ID: 0x4510, type: DataType.uint16, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderDemandIntervalMaximalCurrentI1: {ID: 0x4513, type: DataType.uint16, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderActivePowerDemandPhase2: {ID: 0x4909, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactivePowerDemandPhase2: {ID: 0x490A, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentPowerDemandPhase2: {ID: 0x490B, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderDemandIntervalMinimalVoltageL2: {ID: 0x4910, type: DataType.uint16, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderDemandIntervalMaximalCurrentI2: {ID: 0x4913, type: DataType.uint16, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderActivePowerDemandPhase3: {ID: 0x4A09, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderReactivePowerDemandPhase3: {ID: 0x4A0A, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderApparentPowerDemandPhase3: {ID: 0x4A0B, type: DataType.int32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderDemandIntervalMinimalVoltageL3: {ID: 0x4A10, type: DataType.uint16, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderDemandIntervalMaximalCurrentI3: {ID: 0x4A13, type: DataType.uint16, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderCurrentSensorMultiplier: {ID: 0x4E00, type: DataType.uint8, manufacturerCode: ManufacturerCode.SCHNEIDER},
         },
         commands: {
             getProfileInfo: {
@@ -3899,6 +4077,9 @@ const Cluster: {
             danfossSystemStatusCode: {ID: 0x4000, type: DataType.bitmap16, manufacturerCode: ManufacturerCode.DANFOSS},
             danfossSystemStatusWater: {ID: 0x4200, type: DataType.enum8, manufacturerCode: ManufacturerCode.DANFOSS},
             danfossMultimasterRole: {ID: 0x4201, type: DataType.enum8, manufacturerCode: ManufacturerCode.DANFOSS},
+            schneiderMeterStatus: {ID: 0xFF01, type: DataType.uint32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderDiagnosticRegister1: {ID: 0xFF02, type: DataType.uint32, manufacturerCode: ManufacturerCode.SCHNEIDER},
+            schneiderCommunicationQuality: {ID: 0x4000, type: DataType.uint8, manufacturerCode: ManufacturerCode.SCHNEIDER},
         },
         commands: {
         },
@@ -3980,6 +4161,17 @@ const Cluster: {
         commands: {},
         commandsResponse: {},
     },
+    msIkeaVocIndexMeasurement: {
+        ID: 0xfc7e,
+        manufacturerCode: ManufacturerCode.IKEA_OF_SWEDEN,
+        attributes: {
+            measuredValue: {ID: 0x0000, type: DataType.singlePrec},
+            measuredMinValue: {ID: 0x0001, type: DataType.singlePrec},
+            measuredMaxValue: {ID: 0x0002, type: DataType.singlePrec},
+        },
+        commands: {},
+        commandsResponse: {},
+    },
     manuSpecificClusterAduroSmart: {
         ID: 64716,
         attributes: {
@@ -4044,6 +4236,7 @@ const Cluster: {
         ID: 0xFC03,
         manufacturerCode: ManufacturerCode.PHILIPS,
         attributes: {
+            state: {ID: 0x0002, type: DataType.octetStr},
         },
         commands: {
             multiColor: {
@@ -4059,20 +4252,54 @@ const Cluster: {
         ID: 65281,
         manufacturerCode: ManufacturerCode.Sinope,
         attributes: {
+            // attribute ID :1's readable
+            keypadLockout: {ID: 2, type: DataType.enum8},
+            // 'firmware number': {ID: 3, type: DataType.unknown},
+            firmwareVersion: {ID: 4, type: DataType.charStr},
             outdoorTempToDisplay: {ID: 16, type: DataType.int16},
             outdoorTempToDisplayTimeout: {ID: 17, type: DataType.uint16},
+            secondScreenBehavior: {ID: 18, type: DataType.enum8}, // auto:0,setpoint:1,outside:2
             currentTimeToDisplay: {ID: 32, type: DataType.uint32},
             ledIntensityOn: {ID: 82, type: DataType.uint8},
             ledIntensityOff: {ID: 83, type: DataType.uint8},
+            ledColorOn: {ID: 80, type: DataType.uint24},  // inversed hex BBGGRR
+            ledColorOff: {ID: 81, type: DataType.uint24},
+            onLedIntensity: {ID: 82, type: DataType.uint8}, // percent
+            offLedIntensity: {ID: 83, type: DataType.uint8}, // percent
+            actionReport: {ID: 84, type: DataType.enum8}, // singleTapUp: 1,2, doubleTapUp: 1,4, singleTapDown: 17,18, doubleTapDown: 17,20
             minimumBrightness: {ID: 85, type: DataType.uint16},
-            floorControlMode: {ID: 261, type: DataType.enum8},
+            connectedLoadRM: {ID: 96, type: DataType.uint16}, // unit watt/hr for Calypso RM3500 & Load Controller RM3250
+            currentLoad: {ID: 112, type: DataType.bitmap8}, // related to ecoMode(s)
+            ecoMode: {ID: 113, type: DataType.int8}, // default:-128||-100-0-100%
+            ecoMode1: {ID: 114, type: DataType.uint8}, // default:255||0-99
+            ecoMode2: {ID: 115, type: DataType.uint8}, // default 255||0-100
+            unknown: {ID: 117, type: DataType.bitmap32}, // RW *testing*
+            drConfigWaterTempMin: {ID: 118, type: DataType.uint8}, // value 45 or 0
+            drConfigWaterTempTime: {ID: 119, type: DataType.uint8}, // default 2
+            drWTTimeOn: {ID: 120, type: DataType.uint16},
+            unknown1: {ID: 128, type: DataType.uint32}, // readOnly stringNumber *testing*
+            dimmerTimmer: {ID: 160, type: DataType.uint32},
+            unknown2: {ID: 256, type: DataType.uint8}, // readOnly *testing*
+            floorControlMode: {ID: 261, type: DataType.enum8},  // airFloorMode
+            auxOutputMode: {ID: 262, type: DataType.enum8},
+            floorTemperature: {ID: 263, type: DataType.int16},          
             ambiantMaxHeatSetpointLimit: {ID: 264, type: DataType.int16},
             floorMinHeatSetpointLimit: {ID: 265, type: DataType.int16},
             floorMaxHeatSetpointLimit: {ID: 266, type: DataType.int16},
             temperatureSensor: {ID: 267, type: DataType.enum8},
             floorLimitStatus: {ID: 268, type: DataType.enum8},
+            roomTemperature: {ID: 269, type: DataType.int16},            
             timeFormatToDisplay: {ID: 276, type: DataType.enum8},
             GFCiStatus: {ID: 277, type: DataType.enum8},
+            auxConnectedLoad: {ID: 280, type: DataType.uint16},
+            connectedLoad: {ID: 281, type: DataType.uint16},
+            pumpProtection: {ID: 296, type: DataType.uint8},
+            unknown3: {ID: 298, type: DataType.enum8}, // RW default:60||5,10,15,20,30,60 *testing*
+            currentSetpoint: {ID: 299, type: DataType.int16}, // W:to ocuppiedHeatSetpoint, R:depends of SinopeOccupancy
+            // attribute ID: 300's readable, returns a buffer
+            reportLocalTemperature: {ID: 301, type: DataType.int16},
+            // attribute ID: 512's readable
+            coldLoadPickupStatus: {ID: 643, type: DataType.uint8},
         },
         commands: {
         },
@@ -4117,6 +4344,20 @@ const Cluster: {
     },
     manuSpecificLegrandDevices2: {
         ID: 0xfc40,
+        manufacturerCode: ManufacturerCode.LegrandNetatmo,
+        attributes: {},
+        commands: {
+            command0: {
+                ID: 0,
+                parameters: [
+                    {name: 'data', type: BuffaloZclDataType.BUFFER},
+                ],
+            },
+        },
+        commandsResponse: {}
+    },
+    manuSpecificLegrandDevices3: {
+        ID: 0xfc41,
         manufacturerCode: ManufacturerCode.LegrandNetatmo,
         attributes: {},
         commands: {
@@ -4267,6 +4508,17 @@ const Cluster: {
                     {name: 'payloadSize', type: DataType.uint16},
                     {name: 'payload', type: BuffaloZclDataType.LIST_UINT8},
                 ]
+            },
+
+            /**
+             * Gateway connection status (bidirectional)
+             */
+            mcuGatewayConnectionStatus: {
+                ID: 0x25,
+                parameters: [
+                    {name: 'payloadSize', type: DataType.uint16},
+                    {name: 'payload', type: DataType.uint8},
+                ]
             }
         },
         commandsResponse: {
@@ -4364,15 +4616,27 @@ const Cluster: {
                 parameters: [
                     {name: 'payloadSize', type: DataType.uint16}
                 ]
+            },
+
+            /**
+             * Gateway connection status (bidirectional)
+             */
+            mcuGatewayConnectionStatus: {
+                ID: 0x25,
+                parameters: [
+                    {name: 'payloadSize', type: DataType.uint16}
+                ]
             }
         },
     },
-    aqaraOpple: {
+    manuSpecificLumi: {
         ID: 0xFCC0,
         manufacturerCode: ManufacturerCode.LUMI_UNITED_TECH,
         attributes: {
-            mode: {ID: 9, type: DataType.uint8},
-            illuminance: {ID: 0x0112, type: DataType.uint32}
+            mode: {ID: 0x0009, type: DataType.uint8},
+            illuminance: {ID: 0x0112, type: DataType.uint32},
+            displayUnit: {ID: 0x0114, type: DataType.uint8},
+            airQuality: {ID: 0x0129, type: DataType.uint8},
         },
         commands: {},
         commandsResponse: {}
@@ -4393,10 +4657,10 @@ const Cluster: {
             currentPrice: {ID: 0x0200, type: DataType.charStr},
             currentIndexTarif: {ID: 0x0201, type: DataType.uint8},
             currentDate: {ID: 0x0202, type: DataType.charStr},
-            activeEnerfyOutD01: {ID: 0x0203, type: DataType.uint32},
-            activeEnerfyOutD02: {ID: 0x0204, type: DataType.uint32},
-            activeEnerfyOutD03: {ID: 0x0205, type: DataType.uint32},
-            activeEnerfyOutD04: {ID: 0x0206, type: DataType.uint32},
+            activeEnergyOutD01: {ID: 0x0203, type: DataType.uint32},
+            activeEnergyOutD02: {ID: 0x0204, type: DataType.uint32},
+            activeEnergyOutD03: {ID: 0x0205, type: DataType.uint32},
+            activeEnergyOutD04: {ID: 0x0206, type: DataType.uint32},
             injectedVA: {ID: 0x0207, type: DataType.uint16},
             injectedVAMaxN: {ID: 0x0208, type: DataType.int16},
             injectedVAMaxN1: {ID: 0x0209, type: DataType.int16},
@@ -4444,7 +4708,26 @@ const Cluster: {
             switchType: {ID: 0xd030, type: DataType.enum8},
             powerOnBehavior: {ID: 0xd010, type: DataType.enum8},
         },
-        commands: {},
+        commands: {
+            setOptions1: {
+                ID: 0xE5,
+                parameters: [
+                    {name: 'data', type: BuffaloZclDataType.BUFFER},
+                ],
+            },
+            setOptions2: {
+                ID: 0xE6,
+                parameters: [
+                    {name: 'data', type: BuffaloZclDataType.BUFFER},
+                ],
+            },
+            setOptions3: {
+                ID: 0xE7,
+                parameters: [
+                    {name: 'data', type: BuffaloZclDataType.BUFFER},
+                ],
+            },
+        },
         commandsResponse: {},
     },
     manuSpecificCentraliteHumidity: {
@@ -4478,19 +4761,6 @@ const Cluster: {
             x_axis: {ID:18, type: DataType.int16},
             y_axis: {ID:19, type: DataType.int16},
             z_axis: {ID:20, type: DataType.int16},
-        },
-        commands: {},
-        commandsResponse: {},
-    },
-    heimanSpecificPM25Measurement: {
-        // from HS2AQ-3.0海曼智能空气质量检测仪API文档-V01
-        ID: 0x042a,
-        manufacturerCode: ManufacturerCode.Heiman,
-        attributes: {
-            measuredValue: {ID: 0x0000, type: DataType.uint16},
-            measuredMinValue: {ID: 0x0001, type: DataType.uint16},
-            measuredMaxValue: {ID: 0x0002, type: DataType.uint16},
-            measuredTolerance: {ID: 0x0003, type: DataType.uint16},
         },
         commands: {},
         commandsResponse: {},
@@ -4573,6 +4843,46 @@ const Cluster: {
             repast: {
                 ID: 0xf4,
                 parameters: [],
+            },
+        },
+        commandsResponse: {
+        },
+    },
+    tradfriButton: {
+        ID: 0xfc80,
+        manufacturerCode: ManufacturerCode.IKEA_OF_SWEDEN,
+        attributes: {
+        },
+        commands: {
+            action1: {
+                ID: 1,
+                parameters: [
+                    {name: 'data', type: DataType.uint8},
+                ],
+            },
+            action2: {
+                ID: 2,
+                parameters: [
+                    {name: 'data', type: DataType.uint8},
+                ],
+            },
+            action3: {
+                ID: 3,
+                parameters: [
+                    {name: 'data', type: DataType.uint8},
+                ],
+            },
+            action4: {
+                ID: 4,
+                parameters: [
+                    {name: 'data', type: DataType.uint8},
+                ],
+            },
+            action6: {
+                ID: 6,
+                parameters: [
+                    {name: 'data', type: DataType.uint8},
+                ],
             },
         },
         commandsResponse: {
@@ -4705,6 +5015,20 @@ const Cluster: {
         commands: {},
         commandsResponse: {},
     },
+    clipsalWiserSwitchConfigurationClusterServer: {
+        ID: 0xFF17,
+        manufacturerCode: ManufacturerCode.SCHNEIDER,
+        attributes: {
+            SwitchIndication: {ID: 0x0000, type: DataType.enum8},
+            UpSceneID: {ID: 0x0010, type: DataType.uint8},
+            UpGroupID: {ID: 0x0011, type: DataType.uint16},
+            DownSceneID: {ID: 0x0020, type: DataType.uint8},
+            DownGroupID: {ID: 0x0021, type: DataType.uint16},
+            SwitchActions: {ID: 0x0001, type: DataType.enum8},
+        },
+        commands: {},
+        commandsResponse: {},
+    },
     sprutDevice: {
         ID: 26112,
         manufacturerCode: 26214,
@@ -4783,10 +5107,19 @@ const Cluster: {
         attributes: {
             buttonEvent: {ID: 0x0008, type: DataType.uint32},
         },
-        commands: {},
+        commands: {
+            siglisZigfredButtonEvent: {
+                ID: 0x02,
+                parameters: [
+                    {name: 'button', type: DataType.uint8},
+                    {name: 'type', type: DataType.uint8},
+                    {name: 'duration', type: DataType.uint16},
+                ],
+            },
+        },
         commandsResponse: {},
     },
-    manuSpecificInovelliVZM31SN: {
+    manuSpecificInovelli: {
         ID: 64561,
         manufacturerCode: 0x122f,
         attributes: {
@@ -4807,14 +5140,25 @@ const Cluster: {
             stateAfterPowerRestored: {ID: 0x000f, type: DataType.uint8},
             loadLevelIndicatorTimeout: {ID: 0x0011, type: DataType.uint8},
             activePowerReports: {ID: 0x0012, type: DataType.uint8},
+
             periodicPowerAndEnergyReports: {ID: 0x0013, type: DataType.uint16},
             activeEnergyReports: {ID: 0x0014, type: DataType.uint16},
             powerType: {ID: 0x0015, type: DataType.boolean},
             switchType: {ID: 0x0016, type: DataType.uint8},
+            quickStartTime: {ID: 0x0017, type: DataType.uint8},
+            quickStartLevel: {ID: 0x0018, type: DataType.uint8},
+            higherOutputInNonNeutral: {ID: 0x0019, type: DataType.boolean},
+            nonNeutralAuxMediumGear: {ID: 0x001e, type: DataType.uint8},
+            nonNeutralAuxLowGear: {ID: 0x001f, type: DataType.uint8},
+            internalTemperature: {ID: 0x0020, type: DataType.uint8},
+            overheat: {ID: 0x0021, type: DataType.boolean},
             buttonDelay: {ID: 0x0032, type: DataType.uint8},
             deviceBindNumber: {ID: 0x0033, type: DataType.uint8},
             smartBulbMode: {ID: 0x0034, type: DataType.boolean},
-            doubleTapUpForFullBrightness: {ID: 0x0035, type: DataType.boolean},
+            doubleTapUpToParam55: {ID: 0x0035, type: DataType.boolean},
+            doubleTapDownToParam56: {ID: 0x0036, type: DataType.boolean},
+            brightnessLevelForDoubleTapUp: {ID: 0x0037, type: DataType.uint8},
+            brightnessLevelForDoubleTapDown: {ID: 0x0038, type: DataType.uint8},
             defaultLed1ColorWhenOn: {ID: 0x003c, type: DataType.uint8},
             defaultLed1ColorWhenOff: {ID: 0x003d, type: DataType.uint8},
             defaultLed1IntensityWhenOn: {ID: 0x003e, type: DataType.uint8},
@@ -4847,11 +5191,25 @@ const Cluster: {
             ledColorWhenOff: {ID: 0x060, type: DataType.uint8},
             ledIntensityWhenOn: {ID: 0x0061, type: DataType.uint8},
             ledIntensityWhenOff: {ID: 0x0062, type: DataType.uint8},
+            ledBarScaling: {ID: 0x0064, type: DataType.boolean},
+            singleTapBehavior: {ID: 0x0078, type: DataType.uint8},
+            fanTimerMode: {ID: 0x0079, type: DataType.uint8},
+            auxSwitchUniqueScenes: {ID: 0x007b, type: DataType.boolean},
+            bindingOffToOnSyncLevel: {ID: 0x007d, type: DataType.boolean},
+            breezeMode: {ID: 0x0081, type: DataType.uint32},
+            fanControlMode: {ID: 0x0082, type: DataType.uint8},
+            lowLevelForFanControlMode: {ID: 0x0083, type: DataType.uint8},
+            mediumLevelForFanControlMode: {ID: 0x0084, type: DataType.uint8},
+            highLevelForFanControlMode: {ID: 0x0085, type: DataType.uint8},
+            ledColorForFanControlMode: {ID: 0x0086, type: DataType.uint8},
             localProtection: {ID: 0x0100, type: DataType.boolean},
             remoteProtection: {ID: 0x0101, type: DataType.boolean},
             outputMode: {ID: 0x0102, type: DataType.boolean},
             onOffLedMode: {ID: 0x0103, type: DataType.boolean},
-            firmwareUpdateInProgressIndicator:{ID: 0x0104, type: DataType.boolean},
+            firmwareUpdateInProgressIndicator: {ID: 0x0104, type: DataType.boolean},
+            relayClick: {ID: 0x105, type: DataType.boolean},
+            doubleTapClearNotifications: {ID: 0x106, type: DataType.boolean},
+            fanLedLevelType: {ID: 0x0107, type: DataType.uint8},
         },
         commands: {
             ledEffect: {
@@ -4988,6 +5346,430 @@ const Cluster: {
         },
         commandsResponse: {
         },
+    },
+    manuSpecificBosch: {
+        ID: 0xe000,
+        manufacturerCode: ManufacturerCode.Bosch,
+        attributes: {
+            sensitivity: {ID: 0x4003, type: 0x21},
+        },
+        commands: {
+            initiateTestMode: {
+                ID: 0x00,
+                parameters: [],
+            },
+        },
+        commandsResponse: {},
+    },
+    manuSpecificBosch3: {
+        ID: 0xe002,
+        manufacturerCode: ManufacturerCode.Bosch,
+        attributes: {
+            humidity       : {ID: 0x4000, type: 0x21},
+            unknown1       : {ID: 0x4001, type: 0x21},
+            unknown2       : {ID: 0x4002, type: 0x21},
+            airpurity      : {ID: 0x4003, type: 0x21},
+            temperature    : {ID: 0x4004, type: 0x29},
+            illuminance_lux: {ID: 0x4005, type: 0x21},
+            battery        : {ID: 0x4006, type: 0x21},
+            unknown3       : {ID: 0x4007, type: 0x21},
+            unknown4       : {ID: 0x4008, type: 0x21},
+            unknown5       : {ID: 0x4009, type: 0x21},
+            unknown6       : {ID: 0x400a, type: 0x21},
+            unknown7       : {ID: 0x400b, type: 0x21},
+            unknown8       : {ID: 0x400c, type: 0x21},
+        },
+        commands: {},
+        commandsResponse: {},
+    },
+    manuSpecificBosch5: {
+        ID: 0xe004,
+        manufacturerCode: ManufacturerCode.Bosch,
+        attributes: {
+            unknown_attribute: {ID: 0x4000, type: DataType.bitmap8}, // 0,1 ??? read during pairing
+            pre_alarm: {ID: 0x4001, type: DataType.bitmap8}, // 0,1 on/off
+        },
+        commands: {},
+        commandsResponse: {},
+    },
+    manuSpecificBosch7: {
+        ID: 0xe006,
+        manufacturerCode: ManufacturerCode.Bosch,
+        attributes: {
+            unknown1:  {ID: 0x5003, type: 0x28}, // perhaps signal strength? -7?
+            unknown2:  {ID: 0x5004, type: 0x20}, // ????
+            heartbeat: {ID: 0x5005, type: DataType.bitmap8}, // 0,1 on/off
+        },
+        commands: {
+            pairingCompleted: {
+                ID: 0x01,
+                parameters: [],
+            },
+        },
+        commandsResponse: {},
+    },
+    manuSpecificBosch8: {
+        ID: 0xe007,
+        manufacturerCode: ManufacturerCode.Bosch,
+        attributes: {
+            alarm_status: {ID: 0x5000, type: DataType.bitmap32},
+        },
+        commands: { /////////// VALIDATED  ////////////
+            burglarAlarm: {
+                ID: 0x01,
+                parameters: [
+                    {name: 'data', type: DataType.uint8}, // data:1 trips the siren data:0 should stop the siren
+                ],
+            },
+        },
+        commandsResponse: {},
+    },
+    manuSpecificBosch9: {
+        ID: 0xfca1,
+        manufacturerCode: ManufacturerCode.Bosch,
+        attributes: {},
+        commands: {
+            confirmButtonPressed: {
+                ID: 0x0010,
+                parameters: [
+                    {name: 'data', type: BuffaloZclDataType.BUFFER},
+                ],
+            },
+            pairingCompleted: {
+                ID: 0x0012,
+                parameters: [
+                    {name: 'data', type: BuffaloZclDataType.BUFFER},
+                ],
+            },
+        },
+        commandsResponse: {},
+    },
+    manuSpecificBosch10: {
+        ID: 0xfca0,
+        manufacturerCode: ManufacturerCode.Bosch,
+        attributes: {
+            deviceMode: {ID: 0x0000, type: DataType.enum8},
+            switchType: {ID: 0x0001, type: DataType.enum8},
+            calibrationOpeningTime: {ID: 0x0002, type: DataType.uint32},
+            calibrationClosingTime: {ID: 0x0003, type: DataType.uint32},
+            childLock: {ID: 0x0008, type: DataType.boolean},
+            motorState: {ID: 0x0013, type: DataType.enum8},
+        },
+        commands: {},
+        commandsResponse: {},
+    },
+    manuSpecificAssaDoorLock: {
+        ID: 0xFC00,
+        attributes: {
+            autoLockTime: {ID: 0x0012, type: DataType.uint8},
+            wrongCodeAttempts: {ID: 0x0013, type: DataType.uint8},
+            shutdownTime: {ID: 0x0014, type: DataType.uint8},
+            batteryLevel: {ID: 0x0015, type: DataType.uint8},
+            insideEscutcheonLED: {ID: 0x0016, type: DataType.uint8},
+            volume: {ID: 0x0017, type: DataType.uint8},
+            lockMode: {ID: 0x0018, type: DataType.uint8},
+            language: {ID: 0x0019, type: DataType.uint8},
+            allCodesLockout: {ID: 0x001A, type: DataType.boolean},
+            oneTouchLocking: {ID: 0x001B, type: DataType.boolean},
+            privacyButtonSetting: {ID: 0x001C, type: DataType.boolean},
+            /* enableLogging: {ID: 0x0020, type: DataType.boolean},*/ // marked in C4 driver as not supported
+            numberLogRecordsSupported: {ID: 0x0021, type: DataType.uint16},
+            numberPinsSupported: {ID: 0x0030, type: DataType.uint8},
+            numberScheduleSlotsPerUser: {ID: 0x0040, type: DataType.uint8},
+            alarmMask: {ID: 0x0050, type: DataType.uint8},
+        },
+        commands: {
+            getLockStatus: {
+                ID: 0x10,
+                response: 0,
+                parameters: [],
+            },
+            getBatteryLevel: {
+                ID: 0x12,
+                parameters: [],
+            },
+            setRFLockoutTime: {
+                ID: 0x13,
+                parameters: [],
+            },
+            /* getLogRecord: {
+                ID: 0x20,
+                parameters: [],
+            },*/ // marked in C4 driver as not supported
+            userCodeSet: {
+                ID: 0x30,
+                parameters: [
+                    // bit pack ("bbb", slot, status, pinLength) .. pin
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            userCodeGet: {
+                ID: 0x31,
+                parameters: [
+                    // bit pack ("b", slot)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            userCodeClear: {
+                ID: 0x32,
+                parameters: [
+                    // bit pack ("b", slot)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            clearAllUserCodes: {
+                ID: 0x33,
+                parameters: [],
+            },
+            setUserCodeStatus: {
+                ID: 0x34,
+                parameters: [],
+            },
+            getUserCodeStatus: {
+                ID: 0x35,
+                parameters: [],
+            },
+            getLastUserIdEntered: {
+                ID: 0x36,
+                parameters: [],
+            },
+            userAdded: {
+                ID: 0x37,
+                parameters: [],
+            },
+            userDeleted: {
+                ID: 0x38,
+                parameters: [],
+            },
+            setScheduleSlot: {
+                ID: 0x40,
+                parameters: [
+                    // bit pack ("bbbbbbb", 0, slot, weeklyScheduleNumber, startHour, startMinute, hours, minutes)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            getScheduleSlot: {
+                ID: 0x41,
+                parameters: [
+                    // bit pack ("bb", slot, userId)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            setScheduleSlotStatus: {
+                ID: 0x42,
+                parameters: [
+                    // bit pack ("bbb", 0, slot, status)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            reflash: {
+                ID: 0x60,
+                response: 1,
+                parameters: [
+                    // bit pack ("bI", version, length)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            reflashData: {
+                ID: 0x61,
+                response: 2,
+                parameters: [
+                    // bit pack ("IH", segmentId - 1, length) .. string sub (data, start, finish)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            reflashStatus: {
+                ID: 0x62,
+                response: 3,
+                parameters: [
+                    // bit pack ("bI", reflashStatusParameter, 0x00)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            getReflashLock: {
+                ID: 0x90,
+                parameters: [],
+            },
+            getHistory: {
+                ID: 0xA0,
+                parameters: [],
+            },
+            getLogin: {
+                ID: 0xA1,
+                parameters: [],
+            },
+            getUser: {
+                ID: 0xA2,
+                parameters: [],
+            },
+            getUsers: {
+                ID: 0xA3,
+                parameters: [],
+            },
+            getMandatoryAttributes: {
+                ID: 0xB0,
+                parameters: [],
+            },
+            readAttribute: {
+                ID: 0xB1,
+                parameters: [],
+            },
+            writeAttribute: {
+                ID: 0xB2,
+                parameters: [],
+            },
+            configureReporting: {
+                ID: 0xB3,
+                parameters: [],
+            },
+            getBasicClusterAttributes: {
+                ID: 0xB4,
+                parameters: [],
+            },
+        },
+        commandsResponse: {
+            getLockStatusRsp: {
+                ID: 0,
+                parameters: [
+                    {name: 'status', type: DataType.uint8},
+                ],
+            },
+            reflashRsp: {
+                ID: 1,
+                parameters: [
+                    {name: 'status', type: DataType.uint8},
+                ],
+            },
+            reflashDataRsp: {
+                ID: 2,
+                parameters: [
+                    {name: 'status', type: DataType.uint8},
+                ],
+            },
+            reflashStatusRsp: {
+                ID: 3,
+                parameters: [
+                    {name: 'status', type: DataType.uint8},
+                ],
+            },
+            /* boltStateRsp: {
+                ID: 4,
+                parameters: [
+                    {name: 'state', type: DataType.uint8},
+                ],
+            },*/ // C4 driver has this response yet there is no command - maybe a non-specific cluster response?
+            /* lockStatusReportRsp: {
+                ID: 5,
+                parameters: [
+                    {name: 'status', type: DataType.uint8},
+                ],
+            },*/ // C4 driver has this response yet there is no command - maybe a non-specific cluster response?
+            /* handleStateRsp: {
+                ID: 6,
+                parameters: [
+                    {name: 'state', type: DataType.uint8},
+                ],
+            },*/ // C4 driver has this response yet there is no command - maybe a non-specific cluster response?
+            /* userStatusRsp: {
+                ID: 7,
+                parameters: [
+                    {name: 'status', type: DataType.uint8},
+                ],
+            },*/ // C4 driver has this response yet there is no command - maybe a non-specific cluster response?
+        },
+    },
+    manuSpecificDoorman: {
+        ID: 0xEACC,
+        attributes: {},
+        commands: {
+            getConfigurationParameter: {
+                ID: 0xFC,
+                parameters: [
+                    // bit pack ("bbb", 0x00, 0x00, configurationId)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            setConfigurationParameter: {
+                ID: 0xFD,
+                parameters: [
+                    // bit pack ("bbbb", 0x00, 0x00, configurationId, value)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            integrationModeActivation: {
+                ID: 0x25,
+                parameters: [
+                    // bit pack ("bbbbb", slot, codeType, string sub (userCode, 1, 2), string sub (userCode, 3, 4), string sub (userCode, 5, 6)) .. String duplicate (0xff, 12)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+            armDisarm: {
+                ID: 0x4E,
+                parameters: [
+                    // bit pack ("bb", lockSequenceNumber, operatingParameter)
+                    {name: 'payload', type: DataType.charStr},
+                ],
+            },
+        },
+        commandsResponse: {},
+    },
+    manuSpecificNodOnPilotWire: {
+        ID: 0xFC00,
+        manufacturerCode: ManufacturerCode.NodOn,
+        attributes: {
+            mode: {ID: 0x0000, type: DataType.uint8}
+        },
+        commands: {
+            setMode: {
+                ID: 0x0000,
+                parameters: [
+                    {name: 'mode', type: DataType.uint8},
+                ],
+            },
+        },
+        commandsResponse: {
+        },
+    },
+    manuSpecificProfalux1: {
+        ID: 0xfc21,  // Config cluster, 0xfc20 mostly for commands it seems
+        manufacturerCode: ManufacturerCode.PROFALUX,
+        attributes: {
+            motorCoverType: {ID: 0, type: DataType.uint8}, // 0 : rolling shutters (volet), 1 : rolling shutters with tilt (BSO), 2: shade (store)
+        },
+        commands: {},
+        commandsResponse: {},
+    },
+    manuSpecificAmazonWWAH: {
+        ID: 0xfc57,
+        manufacturerCode: ManufacturerCode.AMAZON_LAB126,
+        attributes: {
+            disableOTADowngrades: {ID: 0x0002, type: DataType.boolean},
+            mgmtLeaveWithoutRejoinEnabled: {ID: 0x0003, type: DataType.boolean},
+            nwkRetryCount: {ID: 0x0004, type: DataType.uint8},
+            macRetryCount: {ID: 0x0005, type: DataType.uint8},
+            routerCheckInEnabled: {ID: 0x0006, type: DataType.boolean},
+            touchlinkInterpanEnabled: {ID: 0x0007, type: DataType.boolean},
+            wwahParentClassificationEnabled: {ID: 0x0008, type: DataType.boolean},
+            wwahAppEventRetryEnabled: {ID: 0x0009, type: DataType.boolean},
+            wwahAppEventRetryQueueSize: {ID: 0x000A, type: DataType.uint8},
+            wwahRejoinEnabled: {ID: 0x000B, type: DataType.boolean},
+            macPollFailureWaitTime: {ID: 0x000C, type: DataType.uint8},
+            configurationModeEnabled: {ID: 0x000D, type: DataType.boolean},
+            currentDebugReportID: {ID: 0x000E, type: DataType.uint8},
+            tcSecurityOnNwkKeyRotationEnabled: {ID: 0x000F, type: DataType.boolean},
+            wwahBadParentRecoveryEnabled: {ID: 0x0010, type: DataType.boolean},
+            pendingNetworkUpdateChannel: {ID: 0x0011, type: DataType.uint8},
+            pendingNetworkUpdatePANID: {ID: 0x0012, type: DataType.uint16},
+            otaMaxOfflineDuration: {ID: 0x0013, type: DataType.uint16},
+            clusterRevision: {ID: 0xFFFD, type: DataType.uint16},
+        },
+        commands: {
+            clearBindingTable: {
+                ID: 0x0A,
+                parameters: [],
+            },
+        },
+        commandsResponse: {},
     },
 };
 

@@ -93,7 +93,8 @@ class DeconzAdapter extends Adapter {
      * Adapter methods
      */
     public async start(): Promise<StartResult> {
-        await this.driver.open();
+        let baudrate = this.serialPortOptions.baudRate || 38400;
+        await this.driver.open(baudrate);
         return "resumed";
     }
 
@@ -109,8 +110,8 @@ class DeconzAdapter extends Adapter {
                     ID: 0x01,
                     profileID: 0x0104,
                     deviceID: 0x0005,
-                    inputClusters: [0x0000, 0x000A, 0x0019],
-                    outputClusters: [0x0001, 0x0020, 0x0500]
+                    inputClusters: [0x0000, 0x0006, 0x000A, 0x0019, 0x0501],
+                    outputClusters: [0x0001, 0x0020, 0x0500, 0x0502]
                 },
                 {
                     ID: 0xF2,
@@ -174,7 +175,14 @@ class DeconzAdapter extends Adapter {
                 const fw = await this.driver.readFirmwareVersionRequest();
                 const buf = Buffer.from(fw);
                 let fwString = "0x" + buf.readUInt32LE(0).toString(16);
-                const type: string = (fw[1] === 5) ? "ConBee/RaspBee" : "ConBee2/RaspBee2";
+                let type: string = "";
+                    if (fw[1] === 5) {
+                    type = "ConBee/RaspBee";
+                } else if (fw[1] === 7) {
+                    type = "ConBee2/RaspBee2";
+                } else {
+                    type = "ConBee3";
+                }
                 const meta = {"transportrev":0, "product":0, "majorrel": fw[3], "minorrel": fw[2], "maintrel":0, "revision":fwString};
                 this.fwVersion = {type: type, meta: meta};
                 return {type: type, meta: meta};
@@ -547,8 +555,10 @@ class DeconzAdapter extends Adapter {
 
             let ok = true;
             if (simpleDesc.endpointID === 0x1) {
-                if (!simpleDesc.inputClusters.includes(0x0) || !simpleDesc.inputClusters.includes(0x0A) || !simpleDesc.inputClusters.includes(0x19) ||
-                    !simpleDesc.outputClusters.includes(0x01) || !simpleDesc.outputClusters.includes(0x20) || !simpleDesc.outputClusters.includes(0x500)) {
+                if (!simpleDesc.inputClusters.includes(0x0) || !simpleDesc.inputClusters.includes(0x0A) || !simpleDesc.inputClusters.includes(0x06) ||
+                    !simpleDesc.inputClusters.includes(0x19) || !simpleDesc.inputClusters.includes(0x0501) ||
+                    !simpleDesc.outputClusters.includes(0x01) || !simpleDesc.outputClusters.includes(0x20) || !simpleDesc.outputClusters.includes(0x500) ||
+                    !simpleDesc.outputClusters.includes(0x502)) {
                     debug("missing cluster");
                     ok = false;
                 }
@@ -560,8 +570,8 @@ class DeconzAdapter extends Adapter {
         }
 
         debug("setting new simple descriptor");
-        try {        //[ sd1   ep    proId       devId       vers  #inCl iCl1        iCl2        iCl3        #outC oCl1        oCl2        oCl3      ]
-            const sd = [ 0x00, 0x01, 0x04, 0x01, 0x05, 0x00, 0x01, 0x03, 0x00, 0x00, 0x0A, 0x00, 0x19, 0x00, 0x03, 0x01, 0x00, 0x20, 0x00, 0x00, 0x05];
+        try {        //[ sd1   ep    proId       devId       vers  #inCl iCl1        iCl2        iCl3        iCl4        iCl5        #outC oCl1        oCl2        oCl3        oCl4      ]
+            const sd = [ 0x00, 0x01, 0x04, 0x01, 0x05, 0x00, 0x01, 0x05, 0x00, 0x00, 0x00, 0x06, 0x0A, 0x00, 0x19, 0x00, 0x01, 0x05, 0x04, 0x01, 0x00, 0x20, 0x00, 0x00, 0x05, 0x02, 0x05];
             const sd1 = sd.reverse();
             await this.driver.writeParameterRequest(PARAM.PARAM.STK.Endpoint, sd1);
         } catch (error) {
@@ -614,23 +624,21 @@ class DeconzAdapter extends Adapter {
         this.driver.enqueueSendDataRequest(request)
             .then(result => {
                 debug(`sendZclFrameToEndpoint - message send with transSeq Nr.: ${zclFrame.Header.transactionSequenceNumber}`);
-                debug(command.hasOwnProperty('response') + ", " + zclFrame.Header.frameControl.disableDefaultResponse + ", " + disableResponse);
+                debug(command.hasOwnProperty('response') + ", " + zclFrame.Header.frameControl.disableDefaultResponse + ", " + disableResponse + ", " + request.timeout);
                 if (!command.hasOwnProperty('response') || zclFrame.Header.frameControl.disableDefaultResponse || !disableResponse) {
-                    debug("resolve request");
+                    debug(`resolve request (${zclFrame.Header.transactionSequenceNumber})`);
                     return Promise.resolve();
                 }
             })
             .catch(error => {
-                debug(`sendZclFrameToEndpoint ERROR`);
+                debug(`sendZclFrameToEndpoint ERROR (${zclFrame.Header.transactionSequenceNumber})`);
                 debug(error);
                 //return Promise.reject(new Error("sendZclFrameToEndpoint ERROR " + error));
             });
         try {
                 let data = null;
-                if (command.hasOwnProperty('response') && !disableResponse) {
-                    data = await this.waitForData(networkAddress, 0x104, zclFrame.Cluster.ID, zclFrame.Header.transactionSequenceNumber);
-                } else if (!zclFrame.Header.frameControl.disableDefaultResponse) {
-                    data = await this.waitForData(networkAddress, 0x104, zclFrame.Cluster.ID, zclFrame.Header.transactionSequenceNumber);
+                if ((command.hasOwnProperty('response') && !disableResponse) || !zclFrame.Header.frameControl.disableDefaultResponse) {
+                    data = await this.waitForData(networkAddress, 0x104, zclFrame.Cluster.ID, zclFrame.Header.transactionSequenceNumber, request.timeout);
                 }
 
                 if (data !== null) {
@@ -647,15 +655,15 @@ class DeconzAdapter extends Adapter {
                         wasBroadcast: data.srcAddrMode === 0x01 || data.srcAddrMode === 0xF,
                         destinationEndpoint: data.destEndpoint,
                     };
-                    debug(`response received`);
+                    debug(`response received (${zclFrame.Header.transactionSequenceNumber})`);
                     return response;
                 } else {
-                    debug(`no response expected`);
+                    debug(`no response expected (${zclFrame.Header.transactionSequenceNumber})`);
                     return null;
                 }
 
             } catch (error) {
-                throw new Error("no response received");
+                throw new Error(`no response received (${zclFrame.Header.transactionSequenceNumber})`);
             }
     }
 
@@ -873,6 +881,7 @@ class DeconzAdapter extends Adapter {
 
     public async getNetworkParameters(): Promise<NetworkParameters> {
         try {
+            let changed: boolean = false;
             let panid: any = await this.driver.readParameterRequest(PARAM.PARAM.Network.PAN_ID);
             let expanid: any = await this.driver.readParameterRequest(PARAM.PARAM.Network.APS_EXT_PAN_ID);
             let channel: any = await this.driver.readParameterRequest(PARAM.PARAM.Network.CHANNEL);
@@ -938,10 +947,8 @@ class DeconzAdapter extends Adapter {
 
                 try {
                     await this.driver.writeParameterRequest(PARAM.PARAM.Network.CHANNEL_MASK, setChannelMask);
-                    await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_OFFLINE);
-                    await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_CONNECTED);
-                    await this.sleep(3000);
-                    channel = await this.driver.readParameterRequest(PARAM.PARAM.Network.CHANNEL);
+                    await this.sleep(500);
+                    changed = true;
                 } catch (error) {
                     debug("Could not set channel: " + error);
                 }
@@ -953,10 +960,8 @@ class DeconzAdapter extends Adapter {
 
                 try {
                     await this.driver.writeParameterRequest(PARAM.PARAM.Network.PAN_ID, this.networkOptions.panID);
-                    await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_OFFLINE);
-                    await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_CONNECTED);
-                    await this.sleep(3000);
-                    panid = await this.driver.readParameterRequest(PARAM.PARAM.Network.PAN_ID);
+                    await this.sleep(500);
+                    changed = true;
                 } catch (error) {
                     debug("Could not set panid: " + error);
                 }
@@ -968,12 +973,9 @@ class DeconzAdapter extends Adapter {
                 debug("extended panid in configuration.yaml (" + this.driver.macAddrArrayToString(this.networkOptions.extendedPanID) + ") differs from current extended panid (" + expanid + "). Changing extended panid.");
 
                 try {
-                    //await this.driver.writeParameterRequest(PARAM.PARAM.Network.USE_APS_EXT_PAN_ID, 1);
                     await this.driver.writeParameterRequest(PARAM.PARAM.Network.APS_EXT_PAN_ID, this.networkOptions.extendedPanID);
-                    await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_OFFLINE);
-                    await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_CONNECTED);
-                    await this.sleep(3000);
-                    expanid = await this.driver.readParameterRequest(PARAM.PARAM.Network.APS_EXT_PAN_ID);
+                    await this.sleep(500);
+                    changed = true;
                 } catch (error) {
                     debug("Could not set extended panid: " + error);
                 }
@@ -985,14 +987,25 @@ class DeconzAdapter extends Adapter {
 
                 try {
                     await this.driver.writeParameterRequest(PARAM.PARAM.Network.NETWORK_KEY, this.networkOptions.networkKey);
-                    await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_OFFLINE);
-                    await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_CONNECTED);
-                    await this.sleep(3000);
+                    await this.sleep(500);
+                    changed = true;
                 } catch (error) {
                     debug("Could not set network key: " + error);
                 }
             }
 
+            if (changed) {
+                await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_OFFLINE);
+                await this.sleep(2000);
+                await this.driver.changeNetworkStateRequest(PARAM.PARAM.Network.NET_CONNECTED);
+                await this.sleep(2000);
+                
+                let panid: any = await this.driver.readParameterRequest(PARAM.PARAM.Network.PAN_ID);
+                let expanid: any = await this.driver.readParameterRequest(PARAM.PARAM.Network.APS_EXT_PAN_ID);
+                let channel: any = await this.driver.readParameterRequest(PARAM.PARAM.Network.CHANNEL);
+                let networkKey: any = await this.driver.readParameterRequest(PARAM.PARAM.Network.NETWORK_KEY);
+            }
+            
             return {
                 panID: panid,
                 extendedPanID: expanid,
@@ -1044,11 +1057,11 @@ class DeconzAdapter extends Adapter {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    private waitForData(addr: number, profileId: number, clusterId: number, transactionSequenceNumber?: number) : Promise<ReceivedDataResponse> {
+    private waitForData(addr: number, profileId: number, clusterId: number, transactionSequenceNumber?: number, timeout?: number) : Promise<ReceivedDataResponse> {
         return new Promise((resolve, reject): void => {
             const ts = Date.now();
             const commandId = PARAM.PARAM.APS.DATA_INDICATION;
-            const req: WaitForDataRequest = {addr, profileId, clusterId, transactionSequenceNumber, resolve, reject, ts};
+            const req: WaitForDataRequest = {addr, profileId, clusterId, transactionSequenceNumber, resolve, reject, ts, timeout};
             this.openRequestsQueue.push(req);
         });
     }
@@ -1112,7 +1125,10 @@ class DeconzAdapter extends Adapter {
             }
 
             const now = Date.now();
-            if ((now - req.ts) > 60000) { // 60 seconds
+
+            // Default timeout: 60 seconds.
+            // Comparison is negated to prevent orphans when invalid timeout is entered (resulting in NaN).
+            if (!((now - req.ts) <= (req.timeout ?? 60000))) {
                 //debug("Timeout for request in openRequestsQueue addr: " + req.addr.toString(16) + " clusterId: " + req.clusterId.toString(16) + " profileId: " + req.profileId.toString(16));
                 //remove from busyQueue
                 this.openRequestsQueue.splice(i, 1);

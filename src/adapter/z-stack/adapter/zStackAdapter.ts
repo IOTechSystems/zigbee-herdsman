@@ -437,14 +437,17 @@ class ZStackAdapter extends Adapter {
                 let doAssocRemove = false;
                 if (!assocRemove && dataConfirmResult === ZnpCommandStatus.MAC_TRANSACTION_EXPIRED &&
                     dataRequestAttempt >= 1 && this.supportsAssocRemove()) {
-                    const match =  await this.znp.request(
-                        Subsystem.UTIL, 'assocGetWithAddress',{extaddr: ieeeAddr, nwkaddr: networkAddress}
-                    );
-
-                    if (match.payload.noderelation !== 255) {
-                        doAssocRemove = true;
-                        assocRestore =
-                            {ieeeadr: ieeeAddr, nwkaddr: networkAddress, noderelation: match.payload.noderelation};
+                    /* istanbul ignore else */
+                    if (!process.env['DISABLE_ASSOC_GET']) {
+                        const match =  await this.znp.request(
+                            Subsystem.UTIL, 'assocGetWithAddress',{extaddr: ieeeAddr, nwkaddr: networkAddress}
+                        );
+    
+                        if (match.payload.nwkaddr !== 0xFFFE && match.payload.noderelation !== 255) {
+                            doAssocRemove = true;
+                            assocRestore =
+                                {ieeeadr: ieeeAddr, nwkaddr: networkAddress, noderelation: match.payload.noderelation};
+                        }
                     }
 
                     assocRemove = true;
@@ -501,6 +504,27 @@ class ZStackAdapter extends Adapter {
             } catch (error) {
                 debug('Response timeout (%s:%d,%d)', ieeeAddr, networkAddress, responseAttempt);
                 if (responseAttempt < 1 && !disableRecovery) {
+                    // No response could be because the radio of the end device is turned off:
+                    // Sometimes the coordinator does not properly set the PENDING flag.
+                    // Try to rewrite the device entry in the association table, this fixes it sometimes.
+                    /* istanbul ignore else */
+                    if (!process.env['DISABLE_ASSOC_GET']) {
+                        const match =  await this.znp.request(
+                            Subsystem.UTIL, 'assocGetWithAddress',{extaddr: ieeeAddr, nwkaddr: networkAddress}
+                        );
+                        debug(`Response timeout recovery: Node relation ${
+                            match.payload.noderelation} (${ieeeAddr} / ${match.payload.nwkaddr})`);
+                        if (this.supportsAssocAdd() && this.supportsAssocRemove() &&
+                            match.payload.nwkaddr !== 0xFFFE && match.payload.noderelation == 1
+                        ) {
+                            debug(`Response timeout recovery: Rewrite association table entry (${ieeeAddr})`);
+                            await this.znp.request(Subsystem.UTIL, 'assocRemove', {ieeeadr: ieeeAddr});
+                            await this.znp.request(Subsystem.UTIL, 'assocAdd',
+                                {ieeeadr: ieeeAddr, nwkaddr: networkAddress, noderelation: match.payload.noderelation}
+                            );
+                        }
+                    }
+
                     // No response could be of invalid route, e.g. when message is send to wrong parent of end device.
                     await this.discoverRoute(networkAddress);
                     return this.sendZclFrameToEndpointInternal(
@@ -564,7 +588,8 @@ class ZStackAdapter extends Adapter {
                 );
                 const result = await response.start().promise;
                 if (result.payload.status !== ZnpCommandStatus.SUCCESS) {
-                    throw new Error(`LQI for '${networkAddress}' failed`);
+                    throw new Error(`LQI for '${networkAddress}' failed with error: '${
+                        ZnpCommandStatus[result.payload.status]}' (${result.payload.status})`);
                 }
 
                 return result;
@@ -611,7 +636,8 @@ class ZStackAdapter extends Adapter {
                 );
                 const result = await response.start().promise;
                 if (result.payload.status !== ZnpCommandStatus.SUCCESS) {
-                    throw new Error(`Routing table for '${networkAddress}' failed`);
+                    throw new Error(`Routing table for '${networkAddress}' failed with error: '${
+                        ZnpCommandStatus[result.payload.status]}' (${result.payload.status})`);
                 }
 
                 return result;
@@ -645,7 +671,7 @@ class ZStackAdapter extends Adapter {
 
     public async addInstallCode(ieeeAddress: string, key: Buffer): Promise<void> {
         assert(this.version.product !== ZnpVersion.zStack12, 'Install code is not supported for ZStack 1.2 adapter');
-        const payload = {installCodeFormat: 1, ieeeaddr: ieeeAddress, installCode: key};
+        const payload = {installCodeFormat: key.length === 18 ? 1 : 2, ieeeaddr: ieeeAddress, installCode: key};
         await this.znp.request(Subsystem.APP_CNF, 'bdbAddInstallCode', payload);
     }
 
@@ -754,11 +780,12 @@ class ZStackAdapter extends Adapter {
                         // If a device announces multiple times in a very short time, it makes no sense
                         // to rediscover the route every time.
                         const debouncer = debounce(() => {
+                            // eslint-disable-next-line @typescript-eslint/no-floating-promises
                             this.queue.execute<void>(async () => {
                                 /* istanbul ignore next */
                                 this.discoverRoute(payload.networkAddress, false).catch(() => {});
                             }, payload.networkAddress);
-                        }, 60 * 1000, true);
+                        }, 60 * 1000, {immediate: true});
                         this.deviceAnnounceRouteDiscoveryDebouncers.set(payload.networkAddress, debouncer);
                     }
 
@@ -776,12 +803,16 @@ class ZStackAdapter extends Adapter {
             } else {
                 /* istanbul ignore else */
                 if (object.command === 'leaveInd') {
-                    const payload: Events.DeviceLeavePayload = {
-                        networkAddress: object.payload.srcaddr,
-                        ieeeAddr: object.payload.extaddr,
-                    };
+                    if (object.payload.rejoin) {
+                        debug(`Device leave: Got leave indication with rejoin=true, nothing to do`);
+                    } else {
+                        const payload: Events.DeviceLeavePayload = {
+                            networkAddress: object.payload.srcaddr,
+                            ieeeAddr: object.payload.extaddr,
+                        };
 
-                    this.emit(Events.Events.deviceLeave, payload);
+                        this.emit(Events.Events.deviceLeave, payload);
+                    }
                 }
             }
         } else {
@@ -833,8 +864,8 @@ class ZStackAdapter extends Adapter {
         return true;
     }
 
-    public async backup(): Promise<Models.Backup> {
-        return this.adapterManager.backup.createBackup();
+    public async backup(ieeeAddressesInDatabase: string[]): Promise<Models.Backup> {
+        return this.adapterManager.backup.createBackup(ieeeAddressesInDatabase);
     }
 
     public async setChannelInterPAN(channel: number): Promise<void> {

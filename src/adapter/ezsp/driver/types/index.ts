@@ -13,6 +13,7 @@ import {
     LVList,
     fixed_list,
     WordList,
+    Bytes,
 } from './basic';
 
 import {
@@ -42,6 +43,8 @@ import {
     EzspMfgTokenId,
     EzspStatus,
     EmberStatus,
+    SLStatus,
+    EmberStackError,
     EmberEventUnits,
     EmberNodeType,
     EmberNetworkStatus,
@@ -68,6 +71,7 @@ import {
     EzspSourceRouteOverheadInformation,
     EmberNetworkInitBitmask,
     EmberZDOCmd,
+    EmberDerivedKeyType,
 } from './named';
 
 import {
@@ -113,6 +117,8 @@ import {
     EmberNeighbors,
     EmberRoutingTable,
     EmberRoutingTableEntry,
+    EmberSecurityManagerContext,
+    EmberSecurityManagerNetworkKeyInfo,
 } from './struct';
 
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any*/
@@ -145,6 +151,7 @@ export {
     LVList,
     fixed_list,
     WordList,
+    Bytes,
 
     /* Named Types */
     NcpResetCode,
@@ -173,6 +180,8 @@ export {
     EzspMfgTokenId,
     EzspStatus,
     EmberStatus,
+    SLStatus,
+    EmberStackError,
     EmberEventUnits,
     EmberNodeType,
     EmberNetworkStatus,
@@ -199,6 +208,7 @@ export {
     EzspSourceRouteOverheadInformation,
     EmberNetworkInitBitmask,
     EmberZDOCmd,
+    EmberDerivedKeyType,
 
     /* Structs */
     EzspStruct,
@@ -243,4 +253,6 @@ export {
     EmberNeighbors,
     EmberRoutingTable,
     EmberRoutingTableEntry,
+    EmberSecurityManagerContext,
+    EmberSecurityManagerNetworkKeyInfo,
 };

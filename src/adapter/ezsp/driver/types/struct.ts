@@ -251,6 +251,8 @@ export class EmberMessageDigest extends EzspStruct {
 }
 
 export class EmberAesMmoHashContext extends EzspStruct {
+    public result: Buffer;
+    public length: number;
     // The hash context for an ongoing hash operation.
     static _fields = [
         // The result of ongoing the hash operation.
@@ -361,6 +363,9 @@ export class EmberCurrentSecurityState extends EzspStruct {
 }
 
 export class EmberKeyStruct extends EzspStruct {
+    public key: EmberKeyData;
+    public outgoingFrameCounter: number;
+    public sequenceNumber: number;
     // A structure containing a key and its associated data.
     static _fields = [
         // A bitmask indicating the presence of data within the various fields
@@ -734,5 +739,48 @@ export class EmberIeeeRawFrame extends EzspStruct {
         ['appFrameControl', basic.uint8_t],
         ['clusterId', basic.uint16_t],
         ['profileId', basic.uint16_t],
+    ];
+}
+
+export class EmberSecurityManagerContext extends EzspStruct {
+    // Context for Zigbee Security Manager operations.
+    public type: named.EmberKeyType;
+    public index: number;
+    public derivedType: named.EmberDerivedKeyType;
+    public eui64: named.EmberEUI64;
+    public multiNetworkIndex: number;
+    public flags: number;
+    public psaKeyAlgPermission: basic.uint32_t;
+    static _fields = [
+        // The type of key being referenced.
+        ['type', named.EmberKeyType],
+        // The index of the referenced key.
+        ['index', basic.uint8_t],
+        // The type of key derivation operation to perform on a key.
+        ['derivedType', named.EmberDerivedKeyType],
+        // The EUI64 associated with this key.
+        ['eui64', named.EmberEUI64],
+        // Multi-network index.
+        ['multiNetworkIndex', basic.uint8_t],
+        // Flag bitmask.
+        ['flags', basic.uint8_t],
+        // Algorithm to use with this key (for PSA APIs)
+        ['psaKeyAlgPermission', basic.uint32_t],
+    ];
+}
+
+/** This data structure contains the metadata pertaining to an network key */
+export class EmberSecurityManagerNetworkKeyInfo extends EzspStruct {
+    public networkKeySet: number;// boolean
+    public alternateNetworkKeySet: number;// boolean
+    public networkKeySequenceNumber: number;
+    public altNetworkKeySequenceNumber: number;
+    public networkKeyFrameCounter: number;
+    static _fields = [
+        ['networkKeySet', basic.uint8_t],
+        ['alternateNetworkKeySet', basic.uint8_t],
+        ['networkKeySequenceNumber', basic.uint8_t],
+        ['altNetworkKeySequenceNumber', basic.uint8_t],
+        ['networkKeyFrameCounter', basic.uint32_t],
     ];
 }

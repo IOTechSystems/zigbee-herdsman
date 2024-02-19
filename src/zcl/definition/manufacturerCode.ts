@@ -1060,6 +1060,8 @@ const knownManufacturerCodes = {
     ELKO: 0x1277,
     /** Sprut.device */
     SPRUT_DEVICE: 0x6666,
+    /** NodOn */
+    NODON: 0x128B,
 };
 
 export default {
@@ -1074,4 +1076,6 @@ export default {
     Heiman: knownManufacturerCodes.HEIMAN_TECHNOLOGY,
     Develco: knownManufacturerCodes.DEVELCO,
     SprutDevice: knownManufacturerCodes.SPRUT_DEVICE,
+    Bosch: knownManufacturerCodes.ROBERT_BOSCH_GMBH,
+    NodOn: knownManufacturerCodes.NODON,
 };

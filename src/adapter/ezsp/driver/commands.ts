@@ -7,6 +7,7 @@ import {/* Basic Types */
     LVBytes,
     fixed_list,
     WordList,
+    Bytes,
 
     /* Named Types */
     EmberNodeId,
@@ -27,6 +28,7 @@ import {/* Basic Types */
     EzspMfgTokenId,
     EzspStatus,
     EmberStatus,
+    EmberStackError,
     EmberEventUnits,
     EmberNodeType,
     EmberNetworkStatus,
@@ -76,6 +78,9 @@ import {/* Basic Types */
     EmberMultiAddress,
     EmberNeighbors,
     EmberRoutingTable,
+    EmberSecurityManagerContext,
+    EmberSecurityManagerNetworkKeyInfo,
+    SLStatus,
 } from './types';
 
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any*/
@@ -85,6 +90,8 @@ export interface EZSPFrameDesc {
     ID: number,
     request: ParamsDesc,
     response: ParamsDesc,
+    minV?: number,
+    maxV?: number
 }
 
 export const FRAMES: {[key: string]: EZSPFrameDesc} = {
@@ -1179,6 +1186,24 @@ export const FRAMES: {[key: string]: EZSPFrameDesc} = {
             keyStruct: EmberKeyStruct
         },
     },
+    exportKey: {
+        ID: 0x0114,
+        request: {
+            context: EmberSecurityManagerContext
+        },
+        response: {
+            keyData: EmberKeyData,
+            status: SLStatus,
+        },
+    },
+    getNetworkKeyInfo: {
+        ID: 0x0116,
+        request: null,
+        response: {
+            status: SLStatus,
+            networkKeyInfo: EmberSecurityManagerNetworkKeyInfo,
+        },
+    },
     switchNetworkKeyHandler: {
         ID: 0x006e, // 110
         request: null,
@@ -1286,6 +1311,17 @@ export const FRAMES: {[key: string]: EZSPFrameDesc} = {
         request: {
             partner: EmberEUI64,
             transientKey: EmberKeyData
+        },
+        response: {
+            status: EmberStatus
+        },
+    },
+    importTransientKey: {
+        ID: 0x0111,
+        request: {
+            partner: EmberEUI64,
+            transientKey: EmberKeyData,
+            flags: uint8_t
         },
         response: {
             status: EmberStatus
@@ -2206,17 +2242,21 @@ export const FRAMES: {[key: string]: EZSPFrameDesc} = {
             status: EmberStatus,
             gpdLink: uint8_t,
             sequenceNumber: uint8_t,
-            addr: EmberGpAddress,
+            addrType: uint8_t,
+            addr: uint32_t,
+            srcId: uint32_t,
+            addrE: uint8_t,
             gpdfSecurityLevel: EmberGpSecurityLevel,
             gpdfSecurityKeyType: EmberGpKeyType,
             autoCommissioning: Bool,
             bidirectionalInfo: uint8_t,
             gpdSecurityFrameCounter: uint32_t,
             gpdCommandId: uint8_t,
-            mic: uint32_t,
+            payload: Bytes,
+            // mic: uint32_t,
             //attr: EmberGpSinkListEntry,
-            proxyTableIndex: uint8_t,
-            gpdCommandPayload: LVBytes
+            // proxyTableIndex: uint8_t,
+            // gpdCommandPayload: LVBytes
         },
     },
     changeSourceRouteHandler: {
@@ -2226,6 +2266,16 @@ export const FRAMES: {[key: string]: EZSPFrameDesc} = {
             newChildId: EmberNodeId,
             newParentId: EmberNodeId
         },
+        maxV: 8
+    },
+    incomingNetworkStatusHandler: {
+        ID: 0x00C4,
+        request: null,
+        response: {
+            errorCode: EmberStackError,
+            target: EmberNodeId
+        },
+        minV: 9
     },
     setSourceRouteDiscoveryMode: {
         ID: 0x005a,
@@ -2238,10 +2288,14 @@ export const FRAMES: {[key: string]: EZSPFrameDesc} = {
     },
 };
 
-export const FRAME_NAME_BY_ID: { [key: string]: string } = {};
+export const FRAME_NAMES_BY_ID: { [key: string]: string[] } = {};
 for (const key of Object.getOwnPropertyNames(FRAMES)) {
     const frameDesc = FRAMES[key];
-    FRAME_NAME_BY_ID[frameDesc.ID] = key;
+    if (FRAME_NAMES_BY_ID[frameDesc.ID]) {
+        FRAME_NAMES_BY_ID[frameDesc.ID].push(key);
+    } else {
+        FRAME_NAMES_BY_ID[frameDesc.ID] = [key];
+    }
 }
 
 interface EZSPZDOResponseFrame {
@@ -2431,6 +2485,10 @@ export const ZDORESPONSES: {[key: string]: EZSPZDOResponseFrame} = {
     },
 };
 
+
+export const ZGP: {[key: string]: EZSPZDOResponseFrame} = {
+
+};
 
 export const ZDOREQUEST_NAME_BY_ID: { [key: string]: string } = {};
 for (const key of Object.getOwnPropertyNames(ZDOREQUESTS)) {
